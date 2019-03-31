@@ -13,7 +13,7 @@
 See the [Releases](https://github.com/master131/iFakeLocation/releases) page.
 
 ## How to use:
-* Click the "Refresh" button and select your iDevice from the list.
+* Connect your iDevice to your PC via USB. Click the "Refresh" button and select your iDevice from the list.
 
 * Enter the desired location (ie. Sydney NSW) in the box and hit "Search" (try to be
   more specific if you are getting strange results).
