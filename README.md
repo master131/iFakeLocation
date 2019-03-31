@@ -6,8 +6,11 @@
 * .NET Framework 4.5 or newer (pre-installed on Windows 8 & Windows 10)  
   https://dotnet.microsoft.com/download/dotnet-framework
 
-* iTunes  
+* iTunes (Microsoft Store version or Win32/Win64 is fine)  
   https://www.apple.com/itunes/download/
+
+## Download:
+See the [Releases](https://github.com/master131/iFakeLocation/releases) page.
 
 ## How to use:
 * Click the "Refresh" button and select your iDevice from the list.
