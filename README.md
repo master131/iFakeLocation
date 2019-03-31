@@ -36,3 +36,4 @@ A: Ensure that it is plugged in, you have trusted your PC and that the device is
 
 ## Special Thanks:
 * [idevicelocation by JonGabilondoAngulo](https://github.com/JonGabilondoAngulo/idevicelocation)
+* [Xcode-iOS-Developer-Disk-Image by xushuduo](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/)
