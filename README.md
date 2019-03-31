@@ -33,3 +33,6 @@ See the [Releases](https://github.com/master131/iFakeLocation/releases) page.
 ## Help:
 Q: My device doesn't show up on the list?  
 A: Ensure that it is plugged in, you have trusted your PC and that the device is visible on iTunes.
+
+## Special Thanks:
+* [idevicelocation by JonGabilondoAngulo](https://github.com/JonGabilondoAngulo/idevicelocation)
