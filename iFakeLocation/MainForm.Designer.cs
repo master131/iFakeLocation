@@ -220,7 +220,7 @@
             this.Font = new System.Drawing.Font("Segoe UI", 8.25F);
             this.MinimumSize = new System.Drawing.Size(585, 478);
             this.Name = "MainForm";
-            this.Text = "iFakeLocation v0.1";
+            this.Text = "iFakeLocation";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.MainForm_FormClosed);
             this.mainTableLayoutPanel.ResumeLayout(false);
             this.ResumeLayout(false);

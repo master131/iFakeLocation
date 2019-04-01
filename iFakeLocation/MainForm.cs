@@ -18,6 +18,9 @@ namespace iFakeLocation
         {
             InitializeComponent();
 
+            var ver = Assembly.GetExecutingAssembly().GetName().Version;
+            Text += " v" + ver.Major + "." + ver.Minor;
+
             try
             {
                 // Load the native modules

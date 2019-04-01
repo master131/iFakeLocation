@@ -164,6 +164,8 @@ namespace iFakeLocation
             UploadImage
         }
 
+        private static readonly MobileImageMounterUploadCallBack MounterUploadCallback = MounterReadCallback;
+
         private static int MounterReadCallback(IntPtr buffer, uint size, IntPtr userData) {
             var imageStream = (FileStream) GCHandle.FromIntPtr(userData).Target;
             var buf = new byte[size];
@@ -265,9 +267,8 @@ namespace iFakeLocation
                     case DiskImageUploadMode.UploadImage:
                         // Create stream for device image and wrap as a pointer for callback
                         var handle = GCHandle.Alloc(imageStream);
-
                         // Upload the image and then free unmanaged wrapper
-                        mounter.mobile_image_mounter_upload_image(mounterHandle, imageType, (uint)imageStream.Length, sig, (ushort) sig.Length, MounterReadCallback, GCHandle.ToIntPtr(handle));
+                        mounter.mobile_image_mounter_upload_image(mounterHandle, imageType, (uint)imageStream.Length, sig, (ushort) sig.Length, MounterUploadCallback, GCHandle.ToIntPtr(handle));
                         handle.Free();
                         break;
                     case DiskImageUploadMode.AFC:
