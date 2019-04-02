@@ -28,6 +28,19 @@ sudo apt-get install libideviceactivation libimobiledevice-dev libplist++-dev li
 ## Download:
 See the [Releases](https://github.com/master131/iFakeLocation/releases) page.
 
+## Running:
+### Windows:
+Run the executable called iFakeLocation.exe.
+
+### Mac OSX
+Open the DMG and drag the application to the Desktop or Applications folder. Double-click to run the app.
+
+### Ubuntu
+```
+chmod +x iFakeLocation
+./iFakeLocation
+```
+
 ## How to use:
 * Connect your iDevice to your computer. Click the "Refresh" button and select your iDevice from the list.
 
