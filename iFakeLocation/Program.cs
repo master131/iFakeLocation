@@ -126,8 +126,17 @@ namespace iFakeLocation
         static void GetDevices(HttpListenerContext ctx)
         {
             // Save current devices
-            lock (Devices)
-                Devices = DeviceInformation.GetDevices();
+            try
+            {
+                lock (Devices)
+                    Devices = DeviceInformation.GetDevices();
+            }
+            catch (Exception e)
+            {
+                SetResponse(ctx, new {
+                    error = e.Message
+                });
+            }
 
             // No devices could be read, sent error
             if (Devices == null)
@@ -393,8 +402,8 @@ namespace iFakeLocation
         {
             // Configure paths
             string basePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-
             Environment.CurrentDirectory = basePath;
+
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
 
             try
