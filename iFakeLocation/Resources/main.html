@@ -1,0 +1,352 @@
+<!doctype html>
+<html>
+	<head>
+		<title>iFakeLocation</title>
+		<script src="babel.polyfill.min.js"></script>
+		<script src="fetch.min.js"></script>
+		<script src="jquery-3.3.1.min.js"></script>
+		<script src="popper.min.js"></script>
+		<script src="bootstrap.min.js"></script>
+		<script src="leaflet.js"></script>
+		<script src="leaflet-providers.min.js"></script>
+		<script src="leaflet-geosearch.min.js"></script>
+		<link rel="stylesheet" href="bootstrap.min.css">
+		<link rel="stylesheet" href="leaflet.css">
+		<link rel="stylesheet" href="leaflet-geosearch.css">
+	</head>
+	<body>
+		<div class="p-3 px-md-4 mb-3 bg-white border-bottom box-shadow">
+			<div class="d-flex flex-column align-items-center flex-md-row container">
+				<h4 class="my-0 mr-md-auto font-weight-normal">iFakeLocation</h4>
+				<a id="about-btn" class="btn btn-outline-primary pl-4 pr-4" href="#" title="iFakeLocation">About</a>
+			</div>
+		</div>
+		<div class="container">
+			<form>
+				<div class="mb-3">
+					<label for="device">Device Name:</label><br>
+					<div class="row">
+						<div class="col">
+							<select class="custom-select d-block w-100" id="device" required>
+							</select>
+						</div>
+						<div class="col-md-auto">
+							<button type="button" class="btn btn-primary pl-4 pr-4" id="refresh">Refresh</button>
+						</div>
+					</div>
+				</div>
+			</form>
+			
+			<div id="map" style="width: 100%; height: 500px; max-height: 70vh"></div>
+			
+			<p><small>Click and drag to move the map. Use the mouse wheel or +/- buttons to zoom. Double-click anywhere (or drag the existing marker) to manually select a location.</small></p>
+			
+			<form>
+				<div class="mb-3">
+					<div class="row align-items-center">
+						<div class="col-md-auto">
+							<label class="mb-0" for="device">Location Search:</label>
+						</div>
+						<div class="col">
+							<input type="text" class="form-control" id="query">
+						</div>
+						<div class="col-md-auto">
+							<button type="button" class="btn btn-primary pl-4 pr-4" id="search">Search</button>
+						</div>
+					</div>
+				</div>
+			</form>
+			
+			<div class="mb-3">
+				<div class="row align-items-center">
+					<div class="col">
+						<button type="button" class="btn btn-primary w-100" data-toggle="popover" id="set-location" disabled>Set Fake Location</button>
+					</div>
+					<div class="col">
+						<button type="button" class="btn btn-primary w-100" data-toggle="popover" id="stop-location" disabled>Stop Fake Location</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="messageModal" class="modal" tabindex="-1" role="dialog">
+			<div class="modal-dialog modal-dialog-centered" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">iFakeLocation</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body">
+						<p></p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="downloadModal" class="modal" tabindex="-1" role="dialog">
+			<div class="modal-dialog modal-dialog-centered" role="document">
+				<div class="modal-content">
+					<div class="modal-body">
+						<p></p>
+						<div class="progress">
+							<div class="progress-bar" role="progressbar" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="aboutModal" class="modal" tabindex="-1" role="dialog">
+			<div class="modal-dialog modal-dialog-centered" role="document">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title">About iFakeLocation</h5>
+						<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+							<span aria-hidden="true">&times;</span>
+						</button>
+					</div>
+					<div class="modal-body">
+						<p id="about"></p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script>
+			// Set progress on progress modal
+			function setDownloadProgress(fileName, progress) {
+				$('#downloadModal').find('p').text('Downloading: ' + fileName + ' (' + progress.toFixed(2) + '%)');
+				$('#downloadModal').find('.progress-bar').attr('aria-valuenow', progress).width(Math.round(progress, 2) + '%');
+			}
+		
+			// Display specified message as modal
+			function showMessageModal(message) {
+				$('#messageModal').find('p').text(message);
+				$('#messageModal').modal();
+			}
+		</script>
+		<script>
+			var devices = [];
+		
+			// Obtain version information and populate on the about button
+			fetch('/version').then(function(e) {
+				return e.text()
+			}).then(function(v) {
+				$('#about').html('Author: master131<br>Version: ' + v +
+								'<br><a href="https://github.com/master131/iFakeLocation/" target="_blank">View on Github</a>');
+			});
+			
+			$('#about-btn').click(function() {
+				$('#aboutModal').modal();
+			});
+			
+			// Populate device list upon clicking refresh
+			$('#refresh').click(function() {
+				var b = $(this).attr('disabled', true);
+				fetch('/get_devices').then(function(e) {
+					return e.json()
+				}).then(function(r) {
+					b.removeAttr('disabled');
+					if (r.error) {
+						showMessageModal(r.error);
+					} else {
+						devices = r;
+						$('#device').empty();
+						for (var i = 0; i < devices.length; i++)
+							$('#device').append($('<option></option>').text(devices[i].display_name).attr('data-udid', devices[i].udid));
+						if (devices.length)
+							$('#stop-location').removeAttr('disabled');
+						else
+							$('#stop-location').attr('disabled', true);
+						if (marker)
+							$('#set-location').removeAttr('disabled');
+					}
+				});
+			});
+			
+			// Update current download progress
+			function getDownloadProgress(version, callback) {
+				fetch('/get_progress', {
+					method: 'POST',
+					body: version
+				}).then(function(e) {
+					return e.json()
+				}).then(function(r) {
+					if (r.error) {
+						$('#downloadModal').modal('hide');
+						showMessageModal(r.error);
+					} else if (r.done) {
+						$('#downloadModal').modal('hide');
+						callback();
+					} else {
+						setDownloadProgress(r.filename, r.progress);
+						setTimeout(function() {
+							getDownloadProgress(version, callback);
+						}, 250);
+					}
+				});
+			}
+			
+			// Sets the selected marker positon
+			var lt = null;
+			function setLocation(dev, callback) {
+				fetch('/set_location', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({udid: dev.udid, lat: marker.getLatLng().lat, lng: marker.getLatLng().lng })
+				}).then(function(e) {
+					return e.json()
+				}).then(function(r) {
+					if (r.error) {
+						showMessageModal(r.error);
+						callback();
+					} else {
+						$('#set-location').popover({
+							html: true,
+							content: 'Location has been succesfully set. Confirm using Maps or other apps.',
+							trigger: 'manual',
+							placement: 'bottom'
+						});
+						if (lt) clearTimeout(lt);
+						$('#set-location').popover('show');
+						lt = setTimeout(function() {
+							$('#set-location').popover('hide');
+						}, 7000);
+						callback();
+					}
+				});
+			}
+			
+			var ltt = null;
+			function stopLocation(dev, callback) {
+				fetch('/stop_location', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({udid: dev.udid })
+				}).then(function(e) {
+					return e.json()
+				}).then(function(r) {
+					if (r.error) {
+						showMessageModal(r.error);
+						callback();
+					} else {
+						$('#stop-location').popover({
+							html: true,
+							content: 'Fake location has been stopped. If your location is still stuck, try turning Location Services off and back on.',
+							trigger: 'manual',
+							placement: 'bottom'
+						});
+						if (ltt) clearTimeout(ltt);
+						$('#stop-location').popover('show');
+						ltt = setTimeout(function() {
+							$('#stop-location').popover('hide');
+						}, 7000);
+						callback();
+					}
+				});
+			}
+			
+			function locationPerform(b, locationMethod) {
+				var dev = devices[$('#device')[0].selectedIndex];
+				fetch('/has_dependencies', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({udid: dev.udid})
+				}).then(function(e) {
+					return e.json()
+				}).then(function(r) {
+					if (r.error) {
+						b.removeAttr('disabled');
+						showMessageModal(r.error);
+					} else if (r.result) {
+						locationMethod(dev, function() {
+							b.removeAttr('disabled');
+						});
+					} else {
+						getDownloadProgress(r.version, function() { 
+							locationMethod(dev, function() {
+								b.removeAttr('disabled');
+							});
+						});
+						$('#downloadModal').modal({
+							backdrop: 'static',
+							keyboard: false
+						});
+					}
+				});
+			}
+			
+			// Handle location set-location
+			$('#set-location').click(function() {
+				locationPerform($(this).attr('disabled', true), setLocation);
+			});
+			
+			$('#stop-location').click(function() {
+				locationPerform($(this).attr('disabled', true), stopLocation);
+			});
+		</script>
+		<script>
+			// Initialise the OSM provider for searching
+			var provider = new GeoSearch.OpenStreetMapProvider();
+			var map = L.map('map');
+			var marker = null;
+			
+			// Setup double-click marker placement
+			map.on('dblclick', function(e) {
+				if (!marker)
+					marker = new L.marker(e.latlng, {draggable: true}).addTo(map);
+				else
+					marker.setLatLng(e.latlng);
+				if (devices && devices.length)
+					$('#set-location').removeAttr('disabled');
+			});
+			
+			// Handle search button
+			$('#search').click(function() {
+				if (!$('#query').val())
+					return;
+				$('#search').attr('disabled', true);
+				provider.search({query: $('#query').val()}).then(function(r) {
+					$('#search').removeAttr('disabled');
+					if (r.length) {
+						if (!marker)
+							marker = new L.marker([r[0].y, r[0].x], {draggable: true}).addTo(map);
+						else
+							marker.setLatLng([r[0].y, r[0].x]);
+						map.setView([r[0].y, r[0].x], 13);
+						if (devices && devices.length)
+							$('#set-location').removeAttr('disabled');
+					}
+				});
+			});
+			
+			// Disable double-click zooming
+			map.doubleClickZoom.disable();
+			
+			// Set the OSM basemap layer
+			L.tileLayer.provider('OpenStreetMap.Mapnik').addTo(map);
+			
+			// Initialise the map to the user's home country
+			fetch('/home_country').then(function(e) {
+				return e.text()
+			}).then(function(h) {
+				provider.search({query: h}).then(function(r) {
+					if (r.length)
+						map.setView([r[0].y, r[0].x], 4);
+					else
+						map.setView([0, 0], 2);
+				});
+			});
+		</script>
+	</body>
+</html>
