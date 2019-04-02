@@ -18,13 +18,6 @@
 * .NET Core 2.2  
   https://dotnet.microsoft.com/download/linux-package-manager/ubuntu16-04/runtime-2.2.3
   
-* Quamotion packages
-```
-sudo add-apt-repository ppa:quamotion/ppa
-sudo apt-get update
-sudo apt-get install libideviceactivation libimobiledevice-dev libplist++-dev libusbmuxd-dev
-```
-
 ## Download:
 See the [Releases](https://github.com/master131/iFakeLocation/releases) page.
 
