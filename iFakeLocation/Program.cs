@@ -391,6 +391,10 @@ namespace iFakeLocation
 
         static void Main(string[] args)
         {
+            // Configure paths
+            string basePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+
+            Environment.CurrentDirectory = basePath;
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
 
             try
@@ -418,9 +422,6 @@ namespace iFakeLocation
                 Console.WriteLine("Failed to initialise iFakeLocation (no free ports on local system).");
                 return;
             }
-
-            // Configure paths
-            string basePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 
             // Start window
             try
@@ -467,8 +468,15 @@ namespace iFakeLocation
                         {
                             Console.WriteLine("\n" + e);
                         }
-                        if (ctx.Response.OutputStream.CanWrite)
-                            ctx.Response.OutputStream.Close();
+
+                        try
+                        {
+                            if (ctx.Response.OutputStream.CanWrite)
+                                ctx.Response.OutputStream.Close();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                        }
                     }
                     else
                     {
