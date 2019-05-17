@@ -18,15 +18,21 @@
 * .NET Core 2.2  
   https://dotnet.microsoft.com/download/linux-package-manager/ubuntu16-04/runtime-2.2.3
   
-* Quamotion packages
-```
-sudo add-apt-repository ppa:quamotion/ppa
-sudo apt-get update
-sudo apt-get install libideviceactivation libimobiledevice-dev libplist++-dev libusbmuxd-dev
-```
-
 ## Download:
 See the [Releases](https://github.com/master131/iFakeLocation/releases) page.
+
+## Running:
+### Windows:
+Run the executable called iFakeLocation.exe.
+
+### Mac OSX
+Open the DMG and drag the application to the Desktop or Applications folder. Double-click to run the app.
+
+### Ubuntu
+```
+chmod +x iFakeLocation
+./iFakeLocation
+```
 
 ## How to use:
 * Connect your iDevice to your computer. Click the "Refresh" button and select your iDevice from the list.
