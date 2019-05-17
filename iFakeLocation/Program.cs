@@ -128,8 +128,9 @@ namespace iFakeLocation
             // Save current devices
             try
             {
-                lock (Devices)
-                    Devices = DeviceInformation.GetDevices();
+                if (Devices != null)
+                    lock (Devices)
+                        Devices = DeviceInformation.GetDevices();
             }
             catch (Exception e)
             {
@@ -355,6 +356,13 @@ namespace iFakeLocation
             }
         }
 
+        [EndpointMethod("exit")]
+        static void Exit(HttpListenerContext ctx)
+        {
+            SetResponse(ctx, "");
+            Environment.Exit(0);
+        }
+
         [EndpointMethod("has_dependencies")]
         static void HasDepedencies(HttpListenerContext ctx)
         {
@@ -385,11 +393,19 @@ namespace iFakeLocation
                         if (!hasDeps)
                         {
                             var links = DeveloperImageHelper.GetLinksForDevice(device);
-                            var state = new DownloadState(links.Select(t => t.Item1).ToArray(), links.Select(t => t.Item2).ToArray());
-                            lock (Downloads)
-                                if (!Downloads.ContainsKey(verStr))
-                                    Downloads[verStr] = state;
-                            state.Start();
+                            if (links != null)
+                            {
+                                var state = new DownloadState(links.Select(t => t.Item1).ToArray(), links.Select(t => t.Item2).ToArray());
+                                lock (Downloads)
+                                    if (!Downloads.ContainsKey(verStr))
+                                        Downloads[verStr] = state;
+                                state.Start();
+                            }
+                            else
+                            {
+                                SetResponse(ctx, new { error = "Your device's iOS version is not supported at this time." });
+                                return;
+                            }
                         }
 
                         SetResponse(ctx, new { result = hasDeps, version = verStr });

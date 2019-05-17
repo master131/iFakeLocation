@@ -19,6 +19,7 @@
 			<div class="d-flex flex-column align-items-center flex-md-row container">
 				<h4 class="my-0 mr-md-auto font-weight-normal">iFakeLocation</h4>
 				<a id="about-btn" class="btn btn-outline-primary pl-4 pr-4" href="#" title="iFakeLocation">About</a>
+				<a id="exit-btn" class="btn btn-outline-primary pl-4 pr-4 ml-4" href="#" title="iFakeLocation" onclick="window.open('', '_self', ''); window.close();">Exit</a>
 			</div>
 		</div>
 		<div class="container">
@@ -142,6 +143,13 @@
 			
 			$('#about-btn').click(function() {
 				$('#aboutModal').modal();
+			});
+			
+			// Close and kill app
+			$('#exit-btn').click(function() {
+				fetch('/exit').then(function(e) {
+					close();
+				});
 			});
 			
 			// Populate device list upon clicking refresh
