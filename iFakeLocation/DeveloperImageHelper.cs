@@ -29,10 +29,16 @@ namespace iFakeLocation
             return HasImageForDevice(device, out p);
         }
 
+        private static readonly Dictionary<string, string> VersionMapping = new Dictionary<string, string>
+        {
+            {"12.3", "12.2"}
+        };
+
         public static string GetSoftwareVersion(DeviceInformation device)
         {
             var ver = ((string)device.Properties["ProductVersion"]).Split('.');
-            return ver[0] + "." + ver[1];
+            string v = ver[0] + "." + ver[1];
+            return VersionMapping.ContainsKey(v) ? VersionMapping[v] : v;
         }
 
         public static bool HasImageForDevice(DeviceInformation device, out string[] paths)
