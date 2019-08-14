@@ -34,6 +34,18 @@ chmod +x iFakeLocation
 ./iFakeLocation
 ```
 
+## How to make it work on iOS 12.4?
+
+Create a folder called "DeveloperImages" (next to the iFakeLocation executable) and inside that folder make a folder called "12.4". Download the following 2 files and place them in "12.4":
+
+iOS 12.3 Developer Images:
+[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.3%20(16F148)/DeveloperDiskImage.dmg)
+[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.3%20(16F148)/DeveloperDiskImage.dmg.signature)
+
+ie. 
+DeveloperImages\12.4\DeveloperDiskImage.dmg
+DeveloperImages\12.4\DeveloperDiskImage.dmg.signature
+
 ## How to use:
 * Connect your iDevice to your computer. Click the "Refresh" button and select your iDevice from the list.
 
