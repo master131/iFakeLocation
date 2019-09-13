@@ -50,6 +50,22 @@ DeveloperImages\12.4\DeveloperDiskImage.dmg
 
 DeveloperImages\12.4\DeveloperDiskImage.dmg.signature
 
+Create a folder called "DeveloperImages" (next to the iFakeLocation executable) and inside that folder make a folder called "13.0". Download the following 2 files and place them in "13.0":
+
+## How to make it work on iOS 13.0?
+
+iOS 13.0 Developer Images:
+
+[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg)
+
+[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg.signature)
+
+ie.
+
+DeveloperImages\13.0\DeveloperDiskImage.dmg
+
+DeveloperImages\13.0\DeveloperDiskImage.dmg.signature
+
 ## How to use:
 * Connect your iDevice to your computer. Click the "Refresh" button and select your iDevice from the list.
 
