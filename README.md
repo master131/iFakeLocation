@@ -38,16 +38,22 @@ chmod +x iFakeLocation
 
 Create a folder called "DeveloperImages" (next to the iFakeLocation executable) and inside that folder make a folder for the iOS version you are running (eg. "12.4", "13.0", etc). Download the matching developer images below and place them in the corresponding folder.
 
-iOS 12.3/12.4 Developer Images:
+* iOS 12.3/12.4 Developer Images:
+
 [DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.3%20(16F148)/DeveloperDiskImage.dmg)
+
 [DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.3%20(16F148)/DeveloperDiskImage.dmg.signature)
 
-iOS 13.0 Developer Images:
+* iOS 13.0 Developer Images:
+
 [DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg)
+
 [DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg.signature)
 
 ie.
+
 DeveloperImages\12.4\DeveloperDiskImage.dmg
+
 DeveloperImages\12.4\DeveloperDiskImage.dmg.signature
 
 ## How to use:
