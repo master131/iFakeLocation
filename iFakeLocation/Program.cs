@@ -11,38 +11,30 @@ using System.Collections.Generic;
 using iMobileDevice;
 using Newtonsoft.Json;
 
-namespace iFakeLocation
-{
-    class Program
-    {
+namespace iFakeLocation {
+    class Program {
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-        class EndpointMethod : Attribute
-        {
+        class EndpointMethod : Attribute {
             public string Name { get; }
 
-            public EndpointMethod(string name)
-            {
+            public EndpointMethod(string name) {
                 Name = name;
             }
         }
 
-        static bool TryBindListenerOnFreePort(out HttpListener httpListener, out int port)
-        {
+        static bool TryBindListenerOnFreePort(out HttpListener httpListener, out int port) {
             // IANA suggested range for dynamic or private ports
             const int MinPort = 49215;
             const int MaxPort = 65535;
 
-            for (port = MinPort; port < MaxPort; port++)
-            {
+            for (port = MinPort; port < MaxPort; port++) {
                 httpListener = new HttpListener();
                 httpListener.Prefixes.Add($"http://localhost:{port}/");
-                try
-                {
+                try {
                     httpListener.Start();
                     return true;
                 }
-                catch
-                {
+                catch {
                 }
             }
 
@@ -51,31 +43,24 @@ namespace iFakeLocation
             return false;
         }
 
-        static void OpenBrowser(string url)
-        {
-            try
-            {
+        static void OpenBrowser(string url) {
+            try {
                 Process.Start(url);
             }
-            catch
-            {
+            catch {
 #if NETCOREAPP2_2
                 // hack because of this: https://github.com/dotnet/corefx/issues/10361
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                     url = url.Replace("&", "^&");
-                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") {CreateNoWindow = true});
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
                     Process.Start("xdg-open", url);
                 }
-                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                {
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
                     Process.Start("open", url);
                 }
-                else
-                {
+                else {
 #endif
                     throw;
 #if NETCOREAPP2_2
@@ -84,38 +69,32 @@ namespace iFakeLocation
             }
         }
 
-        static byte[] ReadStream(Stream stream)
-        {
-            using (var ms = new MemoryStream())
-            {
+        static byte[] ReadStream(Stream stream) {
+            using (var ms = new MemoryStream()) {
                 stream.CopyTo(ms);
                 return ms.ToArray();
             }
         }
 
-        static void SetResponse(HttpListenerContext ctx, string response)
-        {
+        static void SetResponse(HttpListenerContext ctx, string response) {
             using (var sw = new StreamWriter(ctx.Response.OutputStream))
                 sw.Write(response);
         }
 
-        static void SetResponse(HttpListenerContext ctx, object response)
-        {
+        static void SetResponse(HttpListenerContext ctx, object response) {
             using (var sw = new StreamWriter(ctx.Response.OutputStream))
                 sw.Write(JsonConvert.SerializeObject(response));
         }
 
         [EndpointMethod("version")]
-        static void Version(HttpListenerContext ctx)
-        {
+        static void Version(HttpListenerContext ctx) {
             // Write version as response
             var v = Assembly.GetExecutingAssembly().GetName().Version;
             SetResponse(ctx, v.Major + "." + v.Minor);
         }
 
         [EndpointMethod("home_country")]
-        static void HomeCountry(HttpListenerContext ctx)
-        {
+        static void HomeCountry(HttpListenerContext ctx) {
             // Write current region's english name as response
             SetResponse(ctx, RegionInfo.CurrentRegion.EnglishName);
         }
@@ -123,35 +102,30 @@ namespace iFakeLocation
         private static List<DeviceInformation> Devices = new List<DeviceInformation>();
 
         [EndpointMethod("get_devices")]
-        static void GetDevices(HttpListenerContext ctx)
-        {
+        static void GetDevices(HttpListenerContext ctx) {
             // Save current devices
-            try
-            {
+            try {
                 if (Devices != null)
                     lock (Devices)
                         Devices = DeviceInformation.GetDevices();
             }
-            catch (Exception e)
-            {
+            catch (Exception e) {
                 SetResponse(ctx, new {
                     error = e.Message
                 });
             }
 
             // No devices could be read, sent error
-            if (Devices == null)
-            {
+            if (Devices == null) {
                 SetResponse(ctx, new {
-                    error = "Unable to retrieve connected devices. Ensure iTunes is installed and can detect your device(s)."
+                    error =
+                        "Unable to retrieve connected devices. Ensure iTunes is installed and can detect your device(s)."
                 });
             }
-            else
-            {
+            else {
                 // Write devices to output
                 SetResponse(ctx,
-                    Devices.Select(d => new
-                    {
+                    Devices.Select(d => new {
                         name = d.Name,
                         display_name = d.ToString(),
                         udid = d.UDID
@@ -160,8 +134,7 @@ namespace iFakeLocation
             }
         }
 
-        class DownloadState
-        {
+        class DownloadState {
             public string[] Links { get; }
             public string[] Paths { get; }
             public int CurrentIndex { get; set; }
@@ -170,8 +143,7 @@ namespace iFakeLocation
             public bool Done { get; set; }
             public WebClient WebClient { get; }
 
-            public DownloadState(string[] links, string[] paths)
-            {
+            public DownloadState(string[] links, string[] paths) {
                 Links = links;
                 Paths = paths;
                 WebClient = new WebClient();
@@ -179,43 +151,35 @@ namespace iFakeLocation
                 WebClient.DownloadFileCompleted += WebClient_DownloadFileCompleted;
             }
 
-            private void WebClient_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
-            {
-                if (e.Error != null)
-                {
+            private void WebClient_DownloadFileCompleted(object sender,
+                System.ComponentModel.AsyncCompletedEventArgs e) {
+                if (e.Error != null) {
                     Error = e.Error;
                 }
-                else
-                {
-                    try
-                    {
+                else {
+                    try {
                         File.Move(Paths[CurrentIndex] + ".incomplete", Paths[CurrentIndex]);
                     }
-                    catch (Exception ex)
-                    {
+                    catch (Exception ex) {
                         Error = ex;
                         return;
                     }
 
-                    if (CurrentIndex + 1 >= Links.Length)
-                    {
+                    if (CurrentIndex + 1 >= Links.Length) {
                         Done = true;
                     }
-                    else
-                    {
+                    else {
                         CurrentIndex++;
                         ProcessNext();
                     }
                 }
             }
 
-            private void WebClient_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
-            {
+            private void WebClient_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e) {
                 Progress = e.ProgressPercentage;
             }
 
-            private void ProcessNext()
-            {
+            private void ProcessNext() {
                 Progress = 0;
                 var p = Path.GetDirectoryName(Paths[CurrentIndex]);
                 if (!string.IsNullOrEmpty(p) && !Directory.Exists(p))
@@ -223,14 +187,12 @@ namespace iFakeLocation
                 WebClient.DownloadFileAsync(new Uri(Links[CurrentIndex]), Paths[CurrentIndex] + ".incomplete");
             }
 
-            public void Start()
-            {
+            public void Start() {
                 if (CurrentIndex < Links.Length)
                     ProcessNext();
             }
 
-            public void Stop()
-            {
+            public void Stop() {
                 WebClient.CancelAsync();
             }
         }
@@ -238,73 +200,60 @@ namespace iFakeLocation
         static readonly Dictionary<string, DownloadState> Downloads = new Dictionary<string, DownloadState>();
 
         [EndpointMethod("get_progress")]
-        static void GetProgress(HttpListenerContext ctx)
-        {
+        static void GetProgress(HttpListenerContext ctx) {
             string version;
             using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding))
                 version = sr.ReadToEnd();
 
             DownloadState state;
-            if (Downloads.TryGetValue(version, out state))
-            {
-                if (state.Error != null)
-                {
-                    SetResponse(ctx, new { error = state.Error.ToString() });
+            if (Downloads.TryGetValue(version, out state)) {
+                if (state.Error != null) {
+                    SetResponse(ctx, new {error = state.Error.ToString()});
                 }
-                else if (state.Done)
-                {
-                    SetResponse(ctx, new { done = true });
+                else if (state.Done) {
+                    SetResponse(ctx, new {done = true});
                 }
-                else
-                {
-                    SetResponse(ctx, new { filename = Path.GetFileName(state.Paths[state.CurrentIndex]), progress = state.Progress });
+                else {
+                    SetResponse(ctx,
+                        new {filename = Path.GetFileName(state.Paths[state.CurrentIndex]), progress = state.Progress});
                 }
             }
-            else
-            {
-                SetResponse(ctx, new { error = "Download state is unrecognised." });
+            else {
+                SetResponse(ctx, new {error = "Download state is unrecognised."});
             }
         }
 
         [EndpointMethod("stop_location")]
-        static void StopLocation(HttpListenerContext ctx)
-        {
-            if (ctx.Request.Headers["Content-Type"] == "application/json")
-            {
-                using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding))
-                {
+        static void StopLocation(HttpListenerContext ctx) {
+            if (ctx.Request.Headers["Content-Type"] == "application/json") {
+                using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding)) {
                     // Read the JSON body
                     dynamic data = JsonConvert.DeserializeObject<dynamic>(sr.ReadToEnd());
                     DeviceInformation device;
 
                     // Find the matching device udid
                     lock (Devices)
-                        device = Devices.FirstOrDefault(d => d.UDID == (string)data.udid);
+                        device = Devices.FirstOrDefault(d => d.UDID == (string) data.udid);
 
                     // Check if we already have the dependencies
-                    if (device == null)
-                    {
-                        SetResponse(ctx, new { error = "Unable to find the specified device. Are you sure it is connected?" });
+                    if (device == null) {
+                        SetResponse(ctx,
+                            new {error = "Unable to find the specified device. Are you sure it is connected?"});
                     }
-                    else
-                    {
-                        try
-                        {
+                    else {
+                        try {
                             string[] p;
-                            if (DeveloperImageHelper.HasImageForDevice(device, out p))
-                            {
+                            if (DeveloperImageHelper.HasImageForDevice(device, out p)) {
                                 device.EnableDeveloperMode(p[0], p[1]);
                                 device.StopLocation();
-                                SetResponse(ctx, new { success = true });
+                                SetResponse(ctx, new {success = true});
                             }
-                            else
-                            {
+                            else {
                                 throw new Exception("The developer images for the specified device are missing.");
                             }
                         }
-                        catch (Exception e)
-                        {
-                            SetResponse(ctx, new { error = e.Message });
+                        catch (Exception e) {
+                            SetResponse(ctx, new {error = e.Message});
                         }
                     }
                 }
@@ -312,44 +261,36 @@ namespace iFakeLocation
         }
 
         [EndpointMethod("set_location")]
-        static void SetLocation(HttpListenerContext ctx)
-        {
-            if (ctx.Request.Headers["Content-Type"] == "application/json")
-            {
-                using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding))
-                {
+        static void SetLocation(HttpListenerContext ctx) {
+            if (ctx.Request.Headers["Content-Type"] == "application/json") {
+                using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding)) {
                     // Read the JSON body
                     dynamic data = JsonConvert.DeserializeObject<dynamic>(sr.ReadToEnd());
                     DeviceInformation device;
 
                     // Find the matching device udid
                     lock (Devices)
-                        device = Devices.FirstOrDefault(d => d.UDID == (string)data.udid);
+                        device = Devices.FirstOrDefault(d => d.UDID == (string) data.udid);
 
                     // Check if we already have the dependencies
-                    if (device == null)
-                    {
-                        SetResponse(ctx, new { error = "Unable to find the specified device. Are you sure it is connected?" });
+                    if (device == null) {
+                        SetResponse(ctx,
+                            new {error = "Unable to find the specified device. Are you sure it is connected?"});
                     }
-                    else
-                    {
-                        try
-                        {
+                    else {
+                        try {
                             string[] p;
-                            if (DeveloperImageHelper.HasImageForDevice(device, out p))
-                            {
+                            if (DeveloperImageHelper.HasImageForDevice(device, out p)) {
                                 device.EnableDeveloperMode(p[0], p[1]);
-                                device.SetLocation(new PointLatLng { Lat = data.lat, Lng = data.lng });
-                                SetResponse(ctx, new { success = true });
+                                device.SetLocation(new PointLatLng {Lat = data.lat, Lng = data.lng});
+                                SetResponse(ctx, new {success = true});
                             }
-                            else
-                            {
+                            else {
                                 throw new Exception("The developer images for the specified device are missing.");
                             }
                         }
-                        catch (Exception e)
-                        {
-                            SetResponse(ctx, new { error = e.Message });
+                        catch (Exception e) {
+                            SetResponse(ctx, new {error = e.Message});
                         }
                     }
                 }
@@ -357,65 +298,58 @@ namespace iFakeLocation
         }
 
         [EndpointMethod("exit")]
-        static void Exit(HttpListenerContext ctx)
-        {
+        static void Exit(HttpListenerContext ctx) {
             SetResponse(ctx, "");
             Environment.Exit(0);
         }
 
         [EndpointMethod("has_dependencies")]
-        static void HasDepedencies(HttpListenerContext ctx)
-        {
-            if (ctx.Request.Headers["Content-Type"] == "application/json")
-            {
-                using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding))
-                {
+        static void HasDepedencies(HttpListenerContext ctx) {
+            if (ctx.Request.Headers["Content-Type"] == "application/json") {
+                using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding)) {
                     // Read the JSON body
                     dynamic data = JsonConvert.DeserializeObject<dynamic>(sr.ReadToEnd());
                     DeviceInformation device;
 
                     // Find the matching device udid
                     lock (Devices)
-                        device = Devices.FirstOrDefault(d => d.UDID == (string)data.udid);
+                        device = Devices.FirstOrDefault(d => d.UDID == (string) data.udid);
 
                     // Check if we already have the dependencies
-                    if (device == null)
-                    {
-                        SetResponse(ctx, new { error = "Unable to find the specified device. Are you sure it is connected?" });
+                    if (device == null) {
+                        SetResponse(ctx,
+                            new {error = "Unable to find the specified device. Are you sure it is connected?"});
                     }
-                    else
-                    {
+                    else {
                         // Obtain the status of the depedencies
                         var hasDeps = DeveloperImageHelper.HasImageForDevice(device);
                         var verStr = DeveloperImageHelper.GetSoftwareVersion(device);
 
                         // Automatically start download if it's missing
-                        if (!hasDeps)
-                        {
+                        if (!hasDeps) {
                             var links = DeveloperImageHelper.GetLinksForDevice(device);
-                            if (links != null)
-                            {
-                                var state = new DownloadState(links.Select(t => t.Item1).ToArray(), links.Select(t => t.Item2).ToArray());
+                            if (links != null) {
+                                var state = new DownloadState(links.Select(t => t.Item1).ToArray(),
+                                    links.Select(t => t.Item2).ToArray());
                                 lock (Downloads)
                                     if (!Downloads.ContainsKey(verStr))
                                         Downloads[verStr] = state;
                                 state.Start();
                             }
-                            else
-                            {
-                                SetResponse(ctx, new { error = "Your device's iOS version is not supported at this time." });
+                            else {
+                                SetResponse(ctx,
+                                    new {error = "Your device's iOS version is not supported at this time."});
                                 return;
                             }
                         }
 
-                        SetResponse(ctx, new { result = hasDeps, version = verStr });
+                        SetResponse(ctx, new {result = hasDeps, version = verStr});
                     }
                 }
             }
         }
 
         static void Main(string[] args) {
-
             // Configure paths
             string basePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
             Environment.CurrentDirectory = basePath;
@@ -428,12 +362,10 @@ namespace iFakeLocation
                 }
             }
 
-            try
-            {
+            try {
                 NativeLibraries.Load();
             }
-            catch
-            {
+            catch {
                 Console.WriteLine("Failed to load necessary files to run iFakeLocation.");
                 return;
             }
@@ -441,47 +373,45 @@ namespace iFakeLocation
             // Retrieve all web endpoint methods
             var methods =
                 typeof(Program).GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
-                .Select(mi => new Tuple<MethodInfo, object>(mi, mi.GetCustomAttributes(true).FirstOrDefault(ci => ci is EndpointMethod)))
-                .Where(kvp => kvp.Item2 != null)
-                .ToDictionary(kvp => ((EndpointMethod)kvp.Item2).Name, kvp => kvp.Item1);
+                    .Select(mi => new Tuple<MethodInfo, object>(mi,
+                        mi.GetCustomAttributes(true).FirstOrDefault(ci => ci is EndpointMethod)))
+                    .Where(kvp => kvp.Item2 != null)
+                    .ToDictionary(kvp => ((EndpointMethod) kvp.Item2).Name, kvp => kvp.Item1);
 
             // Find a free port to run our local server on
             HttpListener listener;
             int port;
-            if (!TryBindListenerOnFreePort(out listener, out port))
-            {
+            if (!TryBindListenerOnFreePort(out listener, out port)) {
                 Console.WriteLine("Failed to initialise iFakeLocation (no free ports on local system).");
                 return;
             }
 
             // Start window
-            try
-            {
+            try {
                 OpenBrowser($"http://localhost:{port}/");
                 Console.WriteLine("iFakeLocation is now running at: " + $"http://localhost:{port}/");
                 Console.WriteLine("\nPress Ctrl-C to quit (or click the close button).");
             }
-            catch
-            {
+            catch {
                 Console.WriteLine("Unable to start iFakeLocation using default web browser.");
                 return;
             }
 
             // Main processing loop
-            while (true)
-            {
+            while (true) {
                 var ctx = listener.GetContext();
-                ThreadPool.QueueUserWorkItem(_ =>
-                {
+                ThreadPool.QueueUserWorkItem(_ => {
                     // Extract the method name from the URL
-                    var methodName = ctx.Request.Url.Segments.Length > 1 ? string.Join("", ctx.Request.Url.Segments.Skip(1)) : "";
+                    var methodName = ctx.Request.Url.Segments.Length > 1
+                        ? string.Join("", ctx.Request.Url.Segments.Skip(1))
+                        : "";
                     if (string.IsNullOrEmpty(methodName))
                         methodName = "main.html";
 
                     // Respond with static resource if specified
                     string path;
-                    if (File.Exists(path = Path.Combine("Resources", methodName.Replace('/', Path.DirectorySeparatorChar))))
-                    {
+                    if (File.Exists(path = Path.Combine("Resources",
+                        methodName.Replace('/', Path.DirectorySeparatorChar)))) {
                         ctx.Response.Headers["Content-Type"] = MimeTypes.GetMimeType(methodName);
                         using (var s = File.OpenRead(path))
                             s.CopyTo(ctx.Response.OutputStream);
@@ -489,28 +419,22 @@ namespace iFakeLocation
                         return;
                     }
                     // Response with response from web method
-                    else if (methods.TryGetValue(methodName, out MethodInfo method))
-                    {
-                        try
-                        {
-                            method.Invoke(null, new object[] { ctx });
+                    else if (methods.TryGetValue(methodName, out MethodInfo method)) {
+                        try {
+                            method.Invoke(null, new object[] {ctx});
                         }
-                        catch (Exception e)
-                        {
+                        catch (Exception e) {
                             Console.WriteLine("\n" + e);
                         }
 
-                        try
-                        {
+                        try {
                             if (ctx.Response.OutputStream.CanWrite)
                                 ctx.Response.OutputStream.Close();
                         }
-                        catch (ObjectDisposedException)
-                        {
+                        catch (ObjectDisposedException) {
                         }
                     }
-                    else
-                    {
+                    else {
                         // Response with nothing
                         ctx.Response.Close();
                         return;

@@ -14,10 +14,8 @@ using iMobileDevice.MobileImageMounter;
 using iMobileDevice.Plist;
 using iMobileDevice.Service;
 
-namespace iFakeLocation
-{
-    class DeviceInformation
-    {
+namespace iFakeLocation {
+    class DeviceInformation {
         private static readonly Dictionary<string, string> RealProductName = new Dictionary<string, string> {
             {"i386", "iPhone Simulator"},
             {"x86_64", "iPhone Simulator"},
@@ -131,26 +129,23 @@ namespace iFakeLocation
         public string UDID { get; }
         public Dictionary<string, object> Properties { get; private set; }
 
-        public DeviceInformation(string name, string udid)
-        {
+        public DeviceInformation(string name, string udid) {
             Name = name;
             UDID = udid;
             Properties = new Dictionary<string, object>();
         }
 
-        private void ReadProperties(PlistHandle node)
-        {
-            Properties = PlistReader.ReadPlistDictFromNode(node, new[] { "ProductType", "ProductVersion", "HostAttached" });
+        private void ReadProperties(PlistHandle node) {
+            Properties =
+                PlistReader.ReadPlistDictFromNode(node, new[] {"ProductType", "ProductVersion", "HostAttached"});
         }
 
-        public override string ToString()
-        {
+        public override string ToString() {
             var sb = new StringBuilder().Append(Name).Append(" (");
 
-            if (Properties.ContainsKey("ProductType"))
-            {
+            if (Properties.ContainsKey("ProductType")) {
                 if (RealProductName.ContainsKey(Properties["ProductType"] as string))
-                    sb.Append(RealProductName[(string)Properties["ProductType"]]);
+                    sb.Append(RealProductName[(string) Properties["ProductType"]]);
                 else
                     sb.Append(Properties["ProductType"]);
             }
@@ -162,25 +157,22 @@ namespace iFakeLocation
             return sb.ToString();
         }
 
-        private enum DiskImageUploadMode
-        {
+        private enum DiskImageUploadMode {
             AFC,
             UploadImage
         }
 
         private static readonly MobileImageMounterUploadCallBack MounterUploadCallback = MounterReadCallback;
 
-        private static int MounterReadCallback(IntPtr buffer, uint size, IntPtr userData)
-        {
-            var imageStream = (FileStream)GCHandle.FromIntPtr(userData).Target;
+        private static int MounterReadCallback(IntPtr buffer, uint size, IntPtr userData) {
+            var imageStream = (FileStream) GCHandle.FromIntPtr(userData).Target;
             var buf = new byte[size];
             var rl = imageStream.Read(buf, 0, buf.Length);
             Marshal.Copy(buf, 0, buffer, buf.Length);
             return rl;
         }
 
-        public void EnableDeveloperMode(string deviceImagePath, string deviceImageSignaturePath)
-        {
+        public void EnableDeveloperMode(string deviceImagePath, string deviceImageSignaturePath) {
             if (!File.Exists(deviceImagePath) || !File.Exists(deviceImageSignaturePath))
                 throw new FileNotFoundException("The specified device image files do not exist.");
 
@@ -193,7 +185,9 @@ namespace iFakeLocation
             FileStream imageStream = null;
 
             // Use upload image for iOS 7 and above, otherwise use AFC
-            DiskImageUploadMode mode = int.Parse(((string)Properties["ProductVersion"]).Split('.')[0]) >= 7 ? DiskImageUploadMode.UploadImage : DiskImageUploadMode.AFC;
+            DiskImageUploadMode mode = int.Parse(((string) Properties["ProductVersion"]).Split('.')[0]) >= 7
+                ? DiskImageUploadMode.UploadImage
+                : DiskImageUploadMode.AFC;
 
             var idevice = LibiMobileDevice.Instance.iDevice;
             var lockdown = LibiMobileDevice.Instance.Lockdown;
@@ -201,8 +195,7 @@ namespace iFakeLocation
             var mounter = LibiMobileDevice.Instance.MobileImageMounter;
             var afc = LibiMobileDevice.Instance.Afc;
 
-            try
-            {
+            try {
                 // Get device handle
                 if (idevice.idevice_new(out deviceHandle, UDID) != iDeviceError.Success)
                     throw new Exception("Unable to open device, is it connected?");
@@ -213,7 +206,8 @@ namespace iFakeLocation
                     throw new Exception("Unable to connect to lockdownd.");
 
                 // Start image mounter service
-                if (lockdown.lockdownd_start_service(lockdownHandle, "com.apple.mobile.mobile_image_mounter", out serviceDescriptor) != LockdownError.Success)
+                if (lockdown.lockdownd_start_service(lockdownHandle, "com.apple.mobile.mobile_image_mounter",
+                        out serviceDescriptor) != LockdownError.Success)
                     throw new Exception("Unable to start the mobile image mounter service.");
 
                 // Create mounter instance
@@ -226,8 +220,7 @@ namespace iFakeLocation
                 serviceDescriptor = null;
 
                 // Start the AFC service
-                if (mode == DiskImageUploadMode.AFC)
-                {
+                if (mode == DiskImageUploadMode.AFC) {
                     if (lockdown.lockdownd_start_service(lockdownHandle, "com.apple.afc", out serviceDescriptor) !=
                         LockdownError.Success)
                         throw new Exception("Unable to start AFC service.");
@@ -246,12 +239,13 @@ namespace iFakeLocation
                 // Check if the developer image has already been mounted
                 const string imageType = "Developer";
                 if (mounter.mobile_image_mounter_lookup_image(mounterHandle, imageType, out plistHandle) ==
-                    MobileImageMounterError.Success)
-                {
-                    var results = PlistReader.ReadPlistDictFromNode(plistHandle, new[] { "ImagePresent", "ImageSignature" });
+                    MobileImageMounterError.Success) {
+                    var results =
+                        PlistReader.ReadPlistDictFromNode(plistHandle, new[] {"ImagePresent", "ImageSignature"});
 
                     // Some iOS use ImagePresent to verify presence, while others use ImageSignature instead
-                    if ((results.ContainsKey("ImagePresent") && results["ImagePresent"] is bool && (bool)results["ImagePresent"]) || results.ContainsKey("ImageSignature"))
+                    if ((results.ContainsKey("ImagePresent") && results["ImagePresent"] is bool &&
+                         (bool) results["ImagePresent"]) || results.ContainsKey("ImageSignature"))
                         return;
                 }
 
@@ -268,19 +262,20 @@ namespace iFakeLocation
                 imageStream = new FileStream(deviceImagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 var sig = File.ReadAllBytes(deviceImageSignaturePath);
 
-                switch (mode)
-                {
+                switch (mode) {
                     case DiskImageUploadMode.UploadImage:
                         // Create stream for device image and wrap as a pointer for callback
                         var handle = GCHandle.Alloc(imageStream);
                         // Upload the image and then free unmanaged wrapper
-                        mounter.mobile_image_mounter_upload_image(mounterHandle, imageType, (uint)imageStream.Length, sig, (ushort)sig.Length, MounterUploadCallback, GCHandle.ToIntPtr(handle));
+                        mounter.mobile_image_mounter_upload_image(mounterHandle, imageType, (uint) imageStream.Length,
+                            sig, (ushort) sig.Length, MounterUploadCallback, GCHandle.ToIntPtr(handle));
                         handle.Free();
                         break;
                     case DiskImageUploadMode.AFC:
                         // Create directory for package
                         ReadOnlyCollection<string> strs;
-                        if (afc.afc_get_file_info(afcHandle, PkgPath, out strs) != AfcError.Success || afc.afc_make_directory(afcHandle, PkgPath) != AfcError.Success)
+                        if (afc.afc_get_file_info(afcHandle, PkgPath, out strs) != AfcError.Success ||
+                            afc.afc_make_directory(afcHandle, PkgPath) != AfcError.Success)
                             throw new Exception("Unable to create directory '" + PkgPath + "' on the device.");
 
                         // Create the target file
@@ -292,36 +287,34 @@ namespace iFakeLocation
                         // Read the file in chunks and write via AFC
                         uint amount = 0;
                         byte[] buf = new byte[8192];
-                        do
-                        {
-                            amount = (uint)imageStream.Read(buf, 0, buf.Length);
-                            if (amount > 0)
-                            {
+                        do {
+                            amount = (uint) imageStream.Read(buf, 0, buf.Length);
+                            if (amount > 0) {
                                 uint written = 0, total = 0;
-                                while (total < amount)
-                                {
+                                while (total < amount) {
                                     // Write and ensure that it succeeded
-                                    if (afc.afc_file_write(afcHandle, af, buf, amount, ref written) != AfcError.Success)
-                                    {
+                                    if (afc.afc_file_write(afcHandle, af, buf, amount, ref written) !=
+                                        AfcError.Success) {
                                         afc.afc_file_close(afcHandle, af);
                                         throw new Exception("An AFC write error occurred.");
                                     }
+
                                     total += written;
                                 }
 
-                                if (total != amount)
-                                {
+                                if (total != amount) {
                                     afc.afc_file_close(afcHandle, af);
                                     throw new Exception("The developer image was not written completely.");
                                 }
                             }
                         } while (amount > 0);
+
                         afc.afc_file_close(afcHandle, af);
                         break;
                 }
 
                 // Mount the image
-                if (mounter.mobile_image_mounter_mount_image(mounterHandle, mountName, sig, (ushort)sig.Length,
+                if (mounter.mobile_image_mounter_mount_image(mounterHandle, mountName, sig, (ushort) sig.Length,
                         imageType, out plistHandle) != MobileImageMounterError.Success)
                     throw new Exception("Unable to mount developer image.");
 
@@ -329,11 +322,11 @@ namespace iFakeLocation
                 var result = PlistReader.ReadPlistDictFromNode(plistHandle);
                 if (!result.ContainsKey("Status") ||
                     result["Status"] as string != "Complete")
-                    throw new Exception("Mount failed with status: " + (result.ContainsKey("Status") ? result["Status"] : "N/A") + " and error: " +
+                    throw new Exception("Mount failed with status: " +
+                                        (result.ContainsKey("Status") ? result["Status"] : "N/A") + " and error: " +
                                         (result.ContainsKey("Error") ? result["Error"] : "N/A"));
             }
-            finally
-            {
+            finally {
                 if (imageStream != null)
                     imageStream.Close();
 
@@ -357,25 +350,21 @@ namespace iFakeLocation
             }
         }
 
-        private static byte[] ToBytesBE(int i)
-        {
-            var b = BitConverter.GetBytes((uint)i);
+        private static byte[] ToBytesBE(int i) {
+            var b = BitConverter.GetBytes((uint) i);
             if (BitConverter.IsLittleEndian) Array.Reverse(b);
             return b;
         }
 
-        public void SetLocation(PointLatLng target)
-        {
+        public void SetLocation(PointLatLng target) {
             SetLocation(this, target);
         }
 
-        public void StopLocation()
-        {
+        public void StopLocation() {
             SetLocation(this, null);
         }
 
-        private static void SetLocation(DeviceInformation deviceInfo, PointLatLng? target)
-        {
+        private static void SetLocation(DeviceInformation deviceInfo, PointLatLng? target) {
             iDeviceHandle deviceHandle = null;
             LockdownClientHandle lockdownHandle = null;
             LockdownServiceDescriptorHandle simulateDescriptor = null;
@@ -385,8 +374,7 @@ namespace iFakeLocation
             var lockdown = LibiMobileDevice.Instance.Lockdown;
             var service = LibiMobileDevice.Instance.Service;
 
-            try
-            {
+            try {
                 // Get device handle
                 var err = idevice.idevice_new(out deviceHandle, deviceInfo.UDID);
                 if (err != iDeviceError.Success)
@@ -404,20 +392,19 @@ namespace iFakeLocation
                     throw new Exception("Unable to start simulatelocation service.");
 
                 // Create new service client
-                if (service.service_client_new(deviceHandle, simulateDescriptor, out serviceClientHandle) != ServiceError.Success)
+                if (service.service_client_new(deviceHandle, simulateDescriptor, out serviceClientHandle) !=
+                    ServiceError.Success)
                     throw new Exception("Unable to create simulatelocation service client.");
 
-                if (!target.HasValue)
-                {
+                if (!target.HasValue) {
                     // Send stop
                     var stopMessage = ToBytesBE(1); // 0x1 (32-bit big-endian uint)
                     uint sent = 0;
-                    if (service.service_send(serviceClientHandle, stopMessage, (uint)stopMessage.Length, ref sent) !=
+                    if (service.service_send(serviceClientHandle, stopMessage, (uint) stopMessage.Length, ref sent) !=
                         ServiceError.Success)
                         throw new Exception("Unable to send stop message to device.");
                 }
-                else
-                {
+                else {
                     // Send start
                     var startMessage = ToBytesBE(0); // 0x0 (32-bit big-endian uint)
                     var lat = Encoding.ASCII.GetBytes(target.Value.Lat.ToString(CultureInfo.InvariantCulture));
@@ -426,18 +413,21 @@ namespace iFakeLocation
                     var lngLen = ToBytesBE(lng.Length);
                     uint sent = 0;
 
-                    if (service.service_send(serviceClientHandle, startMessage, (uint)startMessage.Length, ref sent) != ServiceError.Success ||
-                        service.service_send(serviceClientHandle, latLen, (uint)latLen.Length, ref sent) != ServiceError.Success ||
-                        service.service_send(serviceClientHandle, lat, (uint)lat.Length, ref sent) != ServiceError.Success ||
-                        service.service_send(serviceClientHandle, lngLen, (uint)lngLen.Length, ref sent) != ServiceError.Success ||
-                        service.service_send(serviceClientHandle, lng, (uint)lng.Length, ref sent) != ServiceError.Success)
-                    {
+                    if (service.service_send(serviceClientHandle, startMessage, (uint) startMessage.Length, ref sent) !=
+                        ServiceError.Success ||
+                        service.service_send(serviceClientHandle, latLen, (uint) latLen.Length, ref sent) !=
+                        ServiceError.Success ||
+                        service.service_send(serviceClientHandle, lat, (uint) lat.Length, ref sent) !=
+                        ServiceError.Success ||
+                        service.service_send(serviceClientHandle, lngLen, (uint) lngLen.Length, ref sent) !=
+                        ServiceError.Success ||
+                        service.service_send(serviceClientHandle, lng, (uint) lng.Length, ref sent) !=
+                        ServiceError.Success) {
                         throw new Exception("Unable to send co-ordinates to device.");
                     }
                 }
             }
-            finally
-            {
+            finally {
                 // Cleanup
                 if (serviceClientHandle != null)
                     serviceClientHandle.Close();
@@ -453,8 +443,7 @@ namespace iFakeLocation
             }
         }
 
-        public static List<DeviceInformation> GetDevices()
-        {
+        public static List<DeviceInformation> GetDevices() {
             var idevice = LibiMobileDevice.Instance.iDevice;
             var lockdown = LibiMobileDevice.Instance.Lockdown;
             var plist = LibiMobileDevice.Instance.Plist;
@@ -471,10 +460,8 @@ namespace iFakeLocation
             PlistHandle plistHandle = null;
 
             var devices = new List<DeviceInformation>();
-            foreach (var udid in uddids.Distinct())
-            {
-                try
-                {
+            foreach (var udid in uddids.Distinct()) {
+                try {
                     // Attempt to get device handle of each uuid
                     var err = idevice.idevice_new(out deviceHandle, udid);
                     if (err != iDeviceError.Success)
@@ -503,11 +490,10 @@ namespace iFakeLocation
                     device.ReadProperties(plistHandle);
 
                     // Ensure device is attached
-                    if (!device.Properties.ContainsKey("HostAttached") || (bool)device.Properties["HostAttached"])
+                    if (!device.Properties.ContainsKey("HostAttached") || (bool) device.Properties["HostAttached"])
                         devices.Add(device);
                 }
-                finally
-                {
+                finally {
                     // Cleanup
                     if (plistHandle != null)
                         plistHandle.Close();
@@ -516,7 +502,6 @@ namespace iFakeLocation
                     if (deviceHandle != null)
                         deviceHandle.Close();
                 }
-
             }
 
             return devices;

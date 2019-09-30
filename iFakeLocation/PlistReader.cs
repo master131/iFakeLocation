@@ -4,18 +4,14 @@ using System.Runtime.InteropServices;
 using iMobileDevice;
 using iMobileDevice.Plist;
 
-namespace iFakeLocation
-{
-    static class PlistReader
-    {
-        private static unsafe object ReadValueFromNode(PlistHandle node)
-        {
+namespace iFakeLocation {
+    static class PlistReader {
+        private static unsafe object ReadValueFromNode(PlistHandle node) {
             if (node == null || node.IsInvalid)
                 return null;
 
             var plist = LibiMobileDevice.Instance.Plist;
-            switch (plist.plist_get_node_type(node))
-            {
+            switch (plist.plist_get_node_type(node)) {
                 case PlistType.Boolean:
                     char c = '\0';
                     plist.plist_get_bool_val(node, ref c);
@@ -42,7 +38,7 @@ namespace iFakeLocation
                     plist.plist_get_data_val(node, out data, ref len);
                     byte[] b = new byte[len];
                     fixed (char* cc = data)
-                        Marshal.Copy((IntPtr)cc, b, 0, b.Length);
+                        Marshal.Copy((IntPtr) cc, b, 0, b.Length);
                     return b;
                 case PlistType.Date:
                     int sec = 0, usec = 0;
@@ -51,11 +47,12 @@ namespace iFakeLocation
                 case PlistType.Dict:
                     return ReadPlistDictFromNode(node);
             }
+
             return null;
         }
 
-        public static Dictionary<string, object> ReadPlistDictFromNode(PlistHandle node, ICollection<string> keys = null)
-        {
+        public static Dictionary<string, object> ReadPlistDictFromNode(PlistHandle node,
+            ICollection<string> keys = null) {
             var dict = new Dictionary<string, object>();
             var plist = LibiMobileDevice.Instance.Plist;
 
@@ -69,13 +66,13 @@ namespace iFakeLocation
             plist.plist_dict_new_iter(node, out it);
             string key;
             plist.plist_dict_next_item(node, it, out key, out subnode);
-            while (subnode != null && !subnode.IsInvalid)
-            {
+            while (subnode != null && !subnode.IsInvalid) {
                 if (keys == null || keys.Contains(key))
                     dict[key] = ReadValueFromNode(subnode);
                 subnode.Close();
                 plist.plist_dict_next_item(node, it, out key, out subnode);
             }
+
             return dict;
         }
     }
