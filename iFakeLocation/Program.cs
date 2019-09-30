@@ -414,13 +414,19 @@ namespace iFakeLocation
             }
         }
 
-        static void Main(string[] args)
-        {
+        static void Main(string[] args) {
+
             // Configure paths
             string basePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
             Environment.CurrentDirectory = basePath;
 
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
+            foreach (SecurityProtocolType protocol in Enum.GetValues(typeof(SecurityProtocolType))) {
+                try {
+                    ServicePointManager.SecurityProtocol |= protocol;
+                }
+                catch {
+                }
+            }
 
             try
             {

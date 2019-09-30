@@ -51,7 +51,7 @@ namespace iFakeLocation
 
         public static Tuple<string, string>[] GetLinksForDevice(DeviceInformation device)
         {
-            var verStr = GetSoftwareVersion(device);
+            string verStr = null;
 
             // Populate URLs for developer images from Github
             if (VersionToImageUrl.Count == 0)
@@ -74,7 +74,7 @@ namespace iFakeLocation
                 var response = WebClient.DownloadString("https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/tree-list/" + treeList);
                 var paths = response.Split('"').Where(s => s.EndsWith(".dmg", StringComparison.InvariantCultureIgnoreCase)).ToArray();
                 foreach (var path in paths)
-                    VersionToImageUrl.Add(path.Split('/')[1].Split(' ')[0], "https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/" + path);
+                    VersionToImageUrl[path.Split('/')[1].Split(' ')[0]] = "https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/" + path;
             }
 
             string ss;
