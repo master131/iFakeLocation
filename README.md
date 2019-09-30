@@ -50,6 +50,12 @@ Create a folder called "DeveloperImages" (next to the iFakeLocation executable) 
 
 [DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg.signature)
 
+* iOS 13.1 Developer Images:
+
+[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.1%20(17A844)/DeveloperDiskImage.dmg)
+
+[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.1%20(17A844)/DeveloperDiskImage.dmg.signature)
+
 ie.
 
 DeveloperImages\12.4\DeveloperDiskImage.dmg
