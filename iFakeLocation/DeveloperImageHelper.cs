@@ -43,7 +43,7 @@ namespace iFakeLocation {
         }
 
         public static Tuple<string, string>[] GetLinksForDevice(DeviceInformation device) {
-            string verStr = null;
+            string verStr = GetSoftwareVersion(device);
 
             // Populate URLs for developer images from Github
             if (VersionToImageUrl.Count == 0) {
