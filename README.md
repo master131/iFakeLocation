@@ -36,6 +36,7 @@ chmod +x iFakeLocation
 
 ## How to make it work on iOS X.X?
 
+If for whatever reason the automatic developer image retrieval doesn't work, you can manually download them to be used in iFakeLocation.
 Create a folder called "DeveloperImages" (next to the iFakeLocation executable) and inside that folder make a folder for the iOS version you are running (eg. "12.4", "13.0", etc). Download the matching developer images below and place them in the corresponding folder.
 
 * iOS 12.3/12.4 Developer Images:
