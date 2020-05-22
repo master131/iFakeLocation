@@ -52,6 +52,10 @@ namespace iFakeLocation {
             {"iPhone11,4", "iPhone XS Max"},
             {"iPhone11,6", "iPhone XS Max Global"},
             {"iPhone11,8", "iPhone XR"},
+            {"iPhone12,1", "iPhone 11"},
+            {"iPhone12,3", "iPhone 11 Pro"},
+            {"iPhone12,5", "iPhone 11 Pro Max"},
+            {"iPhone12,8", "iPhone SE 2nd Gen"},
 
             {"iPod1,1", "1st Gen iPod"},
             {"iPod2,1", "2nd Gen iPod"},
@@ -59,6 +63,7 @@ namespace iFakeLocation {
             {"iPod4,1", "4th Gen iPod"},
             {"iPod5,1", "5th Gen iPod"},
             {"iPod7,1", "6th Gen iPod"},
+            {"iPod9,1", "7th Gen iPod"},
 
             {"iPad1,1", "iPad"},
             {"iPad1,2", "iPad 3G"},
@@ -108,6 +113,14 @@ namespace iFakeLocation {
             {"iPad8,6", "iPad Pro 3rd Gen (12.9 inch, 1TB, WiFi)"},
             {"iPad8,7", "iPad Pro 3rd Gen (12.9 inch, WiFi+Cellular)"},
             {"iPad8,8", "iPad Pro 3rd Gen (12.9 inch, 1TB, WiFi+Cellular)"},
+            {"iPad8,9", "iPad Pro 11 inch 2nd Gen (WiFi)"},
+            {"iPad8,10", "iPad Pro 11 inch 2nd Gen (WiFi+Cellular)"},
+            {"iPad8,11", "iPad Pro 12.9 inch 4th Gen (WiFi)"},
+            {"iPad8,12", "iPad Pro 12.9 inch 4th Gen (WiFi+Cellular)"},
+            {"iPad11,1", "iPad mini 5th Gen (WiFi)"},
+            {"iPad11,2", "iPad mini 5th Gen"},
+            {"iPad11,3", "iPad Air 3rd Gen (WiFi)"},
+            {"iPad11,4", "iPad Air 3rd Gen"},
 
             {"Watch1,1", "Apple Watch 38mm case"},
             {"Watch1,2", "Apple Watch 38mm case"},
@@ -122,14 +135,18 @@ namespace iFakeLocation {
             {"Watch4,1", "Apple Watch Series 4 40mm case (GPS)"},
             {"Watch4,2", "Apple Watch Series 4 44mm case (GPS)"},
             {"Watch4,3", "Apple Watch Series 4 40mm case (GPS+Cellular)"},
-            {"Watch4,4", "Apple Watch Series 4 44mm case (GPS+Cellular)"}
+            {"Watch4,4", "Apple Watch Series 4 44mm case (GPS+Cellular)"},
+            {"Watch5,1", "Apple Watch Series 5 40mm case (GPS)"},
+            {"Watch5,2", "Apple Watch Series 5 44mm case (GPS)"},
+            {"Watch5,3", "Apple Watch Series 5 40mm case (GPS+Cellular)"},
+            {"Watch5,4", "Apple Watch Series 5 44mm case (GPS+Cellular)"}
         };
 
         public string Name { get; }
         public string UDID { get; }
         public Dictionary<string, object> Properties { get; private set; }
 
-        public DeviceInformation(string name, string udid) {
+        private DeviceInformation(string name, string udid) {
             Name = name;
             UDID = udid;
             Properties = new Dictionary<string, object>();

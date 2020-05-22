@@ -10,6 +10,7 @@ using System.Globalization;
 using System.Collections.Generic;
 using iMobileDevice;
 using Newtonsoft.Json;
+using ICSharpCode.SharpZipLib.Zip;
 
 namespace iFakeLocation {
     class Program {
@@ -143,6 +144,8 @@ namespace iFakeLocation {
             public bool Done { get; set; }
             public WebClient WebClient { get; }
 
+            public event EventHandler<EventArgs> DownloadCompleted;
+
             public DownloadState(string[] links, string[] paths) {
                 Links = links;
                 Paths = paths;
@@ -158,6 +161,7 @@ namespace iFakeLocation {
                 }
                 else {
                     try {
+                        if (File.Exists(Paths[CurrentIndex])) File.Delete(Paths[CurrentIndex]);
                         File.Move(Paths[CurrentIndex] + ".incomplete", Paths[CurrentIndex]);
                     }
                     catch (Exception ex) {
@@ -166,6 +170,9 @@ namespace iFakeLocation {
                     }
 
                     if (CurrentIndex + 1 >= Links.Length) {
+                        if (DownloadCompleted != null)
+                            DownloadCompleted(this, EventArgs.Empty);
+
                         Done = true;
                     }
                     else {
@@ -303,6 +310,35 @@ namespace iFakeLocation {
             Environment.Exit(0);
         }
 
+        static void DeveloperImageZipDownloaded(object sender, EventArgs e) {
+            var state = (DownloadState) sender;
+            var files = state.Paths;
+
+            try {
+                foreach (var file in files) {
+                    using (var fs = File.OpenRead(file)) {
+                        using (var zf = new ZipFile(fs)) {
+                            foreach (ZipEntry ze in zf) {
+                                if (!ze.IsFile || !ze.Name.Contains("DeveloperDiskImage.dmg"))
+                                    continue;
+                                using (var ds = zf.GetInputStream(ze)) {
+                                    var dest = Path.Combine(Path.GetDirectoryName(file),
+                                        ze.Name.Replace('\\', '/').Split('/').Last());
+                                    using (var of = File.OpenWrite(dest))
+                                        ds.CopyTo(of);
+                                }
+                            }
+                        }
+                    }
+
+                    File.Delete(file);
+                }
+            }
+            catch (Exception ex) {
+                state.Error = ex;
+            }
+        }
+
         [EndpointMethod("has_dependencies")]
         static void HasDepedencies(HttpListenerContext ctx) {
             if (ctx.Request.Headers["Content-Type"] == "application/json") {
@@ -329,8 +365,12 @@ namespace iFakeLocation {
                         if (!hasDeps) {
                             var links = DeveloperImageHelper.GetLinksForDevice(device);
                             if (links != null) {
+                                bool needsExtraction = links.Any(l =>
+                                    l.Item1.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase));
                                 var state = new DownloadState(links.Select(t => t.Item1).ToArray(),
                                     links.Select(t => t.Item2).ToArray());
+                                if (needsExtraction)
+                                    state.DownloadCompleted += DeveloperImageZipDownloaded;
                                 lock (Downloads)
                                     if (!Downloads.ContainsKey(verStr))
                                         Downloads[verStr] = state;

@@ -16,7 +16,8 @@ namespace iFakeLocation {
         }
 
         private static readonly WebClient WebClient = new WebClientEx();
-        private static readonly Dictionary<string, string> VersionToImageUrl = new Dictionary<string, string>();
+        private static readonly Dictionary<string, string> VersionToImageUrlLegacy = new Dictionary<string, string>();
+        private static readonly Dictionary<string, string> VersionToImageUrlZip = new Dictionary<string, string>();
 
         private const string ImagePath = "DeveloperImages";
 
@@ -26,6 +27,7 @@ namespace iFakeLocation {
         }
 
         private static readonly Dictionary<string, string> VersionMapping = new Dictionary<string, string> {
+            {"12.4", "12.3"}
         };
 
         public static string GetSoftwareVersion(DeviceInformation device) {
@@ -46,7 +48,7 @@ namespace iFakeLocation {
             string verStr = GetSoftwareVersion(device);
 
             // Populate URLs for developer images from Github
-            if (VersionToImageUrl.Count == 0) {
+            if (VersionToImageUrlLegacy.Count == 0) {
                 string treeList = "795fc91f28cb3884edc45b876482911c797de85c";
                 try {
                     WebClient.Headers["X-Requested-With"] = "XMLHttpRequest";
@@ -68,18 +70,51 @@ namespace iFakeLocation {
                 var paths = response.Split('"')
                     .Where(s => s.EndsWith(".dmg", StringComparison.InvariantCultureIgnoreCase)).ToArray();
                 foreach (var path in paths)
-                    VersionToImageUrl[path.Split('/')[1].Split(' ')[0]] =
+                    VersionToImageUrlLegacy[path.Split('/')[1].Split(' ')[0]] =
                         "https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/" + path;
             }
 
-            string ss;
-            return VersionToImageUrl.TryGetValue(verStr, out ss)
-                ? new[] {
+            if (VersionToImageUrlZip.Count == 0) {
+                string treeList = "89cdf804bd416d0d6ba3f958b5c6d086cb914fa1";
+                try {
+                    WebClient.Headers["X-Requested-With"] = "XMLHttpRequest";
+                    var resp = WebClient.DownloadString(
+                        "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/find/master?_pjax=%23js-repo-pjax-container");
+                    var tl = "/tree-list/";
+                    var idx = resp.IndexOf(tl, StringComparison.InvariantCultureIgnoreCase);
+                    if (idx != -1)
+                        treeList = resp.Substring(idx + tl.Length, resp.IndexOf('\"', idx) - (idx + tl.Length));
+                }
+                catch {
+                }
+
+                WebClient.Headers["Accept"] = "application/json";
+                WebClient.Headers["X-Requested-With"] = "XMLHttpRequest";
+                var response =
+                    WebClient.DownloadString("https://github.com/haikieu/xcode-developer-disk-image-all-platforms/tree-list/" +
+                                             treeList);
+                var paths = response.Split('"')
+                    .Where(s => s.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase)).ToArray();
+                foreach (var path in paths)
+                    VersionToImageUrlZip[Path.GetFileNameWithoutExtension(path.Split('/').Last())] =
+                        "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/" + path;
+            }
+
+            if (VersionToImageUrlLegacy.TryGetValue(verStr, out var ss)) {
+                return new[] {
                     new Tuple<string, string>(ss, Path.Combine(ImagePath, verStr, "DeveloperDiskImage.dmg")),
                     new Tuple<string, string>(ss + ".signature",
                         Path.Combine(ImagePath, verStr, "DeveloperDiskImage.dmg.signature"))
-                }
-                : null;
+                };
+            }
+
+            if (VersionToImageUrlZip.TryGetValue(verStr, out ss)) {
+                return new[] {
+                    new Tuple<string, string>(ss, Path.Combine(ImagePath, verStr, verStr + ".zip"))
+                };
+            }
+
+            return null;
         }
     }
 }
