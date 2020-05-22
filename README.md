@@ -39,29 +39,21 @@ chmod +x iFakeLocation
 If for whatever reason the automatic developer image retrieval doesn't work, you can manually download them to be used in iFakeLocation.
 Create a folder called "DeveloperImages" (next to the iFakeLocation executable) and inside that folder make a folder for the iOS version you are running (eg. "12.4", "13.0", etc). Download the matching developer images below and place them in the corresponding folder.
 
-* iOS 12.3/12.4 Developer Images:
+| iOS Version | Developer Images Link |
+|-------------|-----------------------|
+| 12.3/12.4   |[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.3%20(16F148)/DeveloperDiskImage.dmg)<br>[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.3%20(16F148)/DeveloperDiskImage.dmg.signature)|
+| 13.0        |[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg)<br>[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg.signature)|
+| 13.1        |[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.1%20(17A844)/DeveloperDiskImage.dmg)<br>[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.1%20(17A844)/DeveloperDiskImage.dmg.signature)|
+| 13.1.1      |[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.1%20(17A853)/DeveloperDiskImage.dmg)<br>[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.1%20(17A853)/DeveloperDiskImage.dmg.signature)|
+| 13.2        |[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.2%20(17B5068e)/DeveloperDiskImage.dmg)<br>[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.2%20(17B5068e)/DeveloperDiskImage.dmg.signature)|
+| 13.2.2/13.3 |[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.2%20(17B102)/DeveloperDiskImage.dmg)<br>[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.2%20(17B102)/DeveloperDiskImage.dmg.signature)|
 
-[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.3%20(16F148)/DeveloperDiskImage.dmg)
-
-[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.3%20(16F148)/DeveloperDiskImage.dmg.signature)
-
-* iOS 13.0 Developer Images:
-
-[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg)
-
-[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.0%20(17A5565b)/DeveloperDiskImage.dmg.signature)
-
-* iOS 13.1 Developer Images:
-
-[DeveloperDiskImage.dmg](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.1%20(17A844)/DeveloperDiskImage.dmg)
-
-[DeveloperDiskImage.dmg.signature](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/13.1%20(17A844)/DeveloperDiskImage.dmg.signature)
-
-ie.
-
-DeveloperImages\12.4\DeveloperDiskImage.dmg
-
-DeveloperImages\12.4\DeveloperDiskImage.dmg.signature
+ie.<br>
+DeveloperImages\12.4\DeveloperDiskImage.dmg<br>
+DeveloperImages\12.4\DeveloperDiskImage.dmg.signature<br>
+<br>
+Can't find your iOS version? Have a look here, sometimes an older image will work (ie. you can use iOS 13.2.2 image for iOS 13.3):<br>
+https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/tree/master/Developer%20Disk%20Image
 
 ## How to use:
 * Connect your iDevice to your computer. Click the "Refresh" button and select your iDevice from the list.
