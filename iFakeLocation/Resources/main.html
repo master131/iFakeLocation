@@ -66,6 +66,9 @@
 					<div class="col">
 						<button type="button" class="btn btn-primary w-100" data-toggle="popover" id="stop-location" disabled>Stop Fake Location</button>
 					</div>
+					<div class="col">
+						<input type="file" id="myInput">
+					</div>
 				</div>
 			</div>
 		</div>
@@ -117,6 +120,13 @@
 				</div>
 			</div>
 		</div>
+		<script>
+            $(document).ready(function () {
+                $("#myInput").change(function () {
+                    alert("GPX route selected.");
+                });
+            });
+		</script>
 		<script>
 			// Set progress on progress modal
 			function setDownloadProgress(fileName, progress) {
