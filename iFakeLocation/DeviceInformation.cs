@@ -261,8 +261,14 @@ namespace iFakeLocation {
                         PlistReader.ReadPlistDictFromNode(plistHandle, new[] {"ImagePresent", "ImageSignature"});
 
                     // Some iOS use ImagePresent to verify presence, while others use ImageSignature instead
-                    if ((results.ContainsKey("ImagePresent") && results["ImagePresent"] is bool &&
-                         (bool) results["ImagePresent"]) || results.ContainsKey("ImageSignature"))
+                    // Ensure to check the content of the ImageSignature value as iOS 14 returns a value even
+                    // if it is empty.
+                    if ((results.ContainsKey("ImagePresent") &&
+                         results["ImagePresent"] is bool &&
+                         (bool) results["ImagePresent"]) ||
+                        (results.ContainsKey("ImageSignature") &&
+                         results["ImageSignature"] is string &&
+                         ((string)results["ImageSignature"]).IndexOf("<data>", StringComparison.InvariantCulture) >= 0))
                         return;
                 }
 

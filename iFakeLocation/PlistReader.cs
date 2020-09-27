@@ -46,6 +46,10 @@ namespace iFakeLocation {
                     return new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc).AddSeconds(sec).ToLocalTime();
                 case PlistType.Dict:
                     return ReadPlistDictFromNode(node);
+                case PlistType.Array:
+                    uint length = 0;
+                    plist.plist_to_xml(node, out var result, ref length);
+                    return result;
             }
 
             return null;
