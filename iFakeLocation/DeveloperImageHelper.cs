@@ -94,23 +94,24 @@ namespace iFakeLocation {
                     WebClient.DownloadString("https://github.com/haikieu/xcode-developer-disk-image-all-platforms/tree-list/" +
                                              treeList);
                 var paths = response.Split('"')
-                    .Where(s => s.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase)).ToArray();
+                    .Where(s => s.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase) &&
+                                      s.IndexOf("iPhoneOS", StringComparison.InvariantCulture) >= 0).ToArray();
                 foreach (var path in paths)
                     VersionToImageUrlZip[Path.GetFileNameWithoutExtension(path.Split('/').Last())] =
                         "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/" + path;
             }
+            
+            if (VersionToImageUrlZip.TryGetValue(verStr, out var ss)) {
+                return new[] {
+                    new Tuple<string, string>(ss, Path.Combine(ImagePath, verStr, verStr + ".zip"))
+                };
+            }
 
-            if (VersionToImageUrlLegacy.TryGetValue(verStr, out var ss)) {
+            if (VersionToImageUrlLegacy.TryGetValue(verStr, out ss)) {
                 return new[] {
                     new Tuple<string, string>(ss, Path.Combine(ImagePath, verStr, "DeveloperDiskImage.dmg")),
                     new Tuple<string, string>(ss + ".signature",
                         Path.Combine(ImagePath, verStr, "DeveloperDiskImage.dmg.signature"))
-                };
-            }
-
-            if (VersionToImageUrlZip.TryGetValue(verStr, out ss)) {
-                return new[] {
-                    new Tuple<string, string>(ss, Path.Combine(ImagePath, verStr, verStr + ".zip"))
                 };
             }
 
