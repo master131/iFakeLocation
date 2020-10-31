@@ -170,9 +170,7 @@ namespace iFakeLocation {
                     }
 
                     if (CurrentIndex + 1 >= Links.Length) {
-                        if (DownloadCompleted != null)
-                            DownloadCompleted(this, EventArgs.Empty);
-
+                        DownloadCompleted?.Invoke(this, EventArgs.Empty);
                         Done = true;
                     }
                     else {
@@ -212,21 +210,20 @@ namespace iFakeLocation {
             using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding))
                 version = sr.ReadToEnd();
 
-            DownloadState state;
-            if (Downloads.TryGetValue(version, out state)) {
+            if (Downloads.TryGetValue(version, out DownloadState state)) {
                 if (state.Error != null) {
-                    SetResponse(ctx, new {error = state.Error.ToString()});
+                    SetResponse(ctx, new { error = state.Error.ToString() });
                 }
                 else if (state.Done) {
-                    SetResponse(ctx, new {done = true});
+                    SetResponse(ctx, new { done = true });
                 }
                 else {
                     SetResponse(ctx,
-                        new {filename = Path.GetFileName(state.Paths[state.CurrentIndex]), progress = state.Progress});
+                        new { filename = Path.GetFileName(state.Paths[state.CurrentIndex]), progress = state.Progress });
                 }
             }
             else {
-                SetResponse(ctx, new {error = "Download state is unrecognised."});
+                SetResponse(ctx, new { error = "Download state is unrecognised." });
             }
         }
 
@@ -249,11 +246,10 @@ namespace iFakeLocation {
                     }
                     else {
                         try {
-                            string[] p;
-                            if (DeveloperImageHelper.HasImageForDevice(device, out p)) {
+                            if (DeveloperImageHelper.HasImageForDevice(device, out string[] p)) {
                                 device.EnableDeveloperMode(p[0], p[1]);
                                 device.StopLocation();
-                                SetResponse(ctx, new {success = true});
+                                SetResponse(ctx, new { success = true });
                             }
                             else {
                                 throw new Exception("The developer images for the specified device are missing.");
@@ -286,8 +282,7 @@ namespace iFakeLocation {
                     }
                     else {
                         try {
-                            string[] p;
-                            if (DeveloperImageHelper.HasImageForDevice(device, out p)) {
+                            if (DeveloperImageHelper.HasImageForDevice(device, out var p)) {
                                 device.EnableDeveloperMode(p[0], p[1]);
                                 device.SetLocation(new PointLatLng {Lat = data.lat, Lng = data.lng});
                                 SetResponse(ctx, new {success = true});
@@ -389,7 +384,7 @@ namespace iFakeLocation {
             }
         }
 
-        static void Main(string[] args) {
+        static void Main() {
             // Configure paths
             string basePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
             Environment.CurrentDirectory = basePath;
@@ -419,9 +414,7 @@ namespace iFakeLocation {
                     .ToDictionary(kvp => ((EndpointMethod) kvp.Item2).Name, kvp => kvp.Item1);
 
             // Find a free port to run our local server on
-            HttpListener listener;
-            int port;
-            if (!TryBindListenerOnFreePort(out listener, out port)) {
+            if (!TryBindListenerOnFreePort(out var listener, out var port)) {
                 Console.WriteLine("Failed to initialise iFakeLocation (no free ports on local system).");
                 return;
             }
