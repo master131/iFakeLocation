@@ -10,7 +10,7 @@
 * iTunes (Microsoft Store version or Win32/Win64 is fine)  
   https://www.apple.com/itunes/download/
   
-* Visual C++ Redistributable for Visual Studio 2015
+* Visual C++ Redistributable for Visual Studio 2015  
   https://www.microsoft.com/en-us/download/details.aspx?id=48145
   
 ### Mac OSX:
