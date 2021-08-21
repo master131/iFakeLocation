@@ -10,6 +10,9 @@
 * iTunes (Microsoft Store version or Win32/Win64 is fine)  
   https://www.apple.com/itunes/download/
   
+* Visual C++ Redistributable for Visual Studio 2015
+  https://www.microsoft.com/en-us/download/details.aspx?id=48145
+  
 ### Mac OSX:
 * .NET Core 2.2 (macOS 10.12 "Sierra" or newer)  
   https://dotnet.microsoft.com/download/thank-you/dotnet-runtime-2.2.3-macos-x64-installer
