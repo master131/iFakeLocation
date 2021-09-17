@@ -5,6 +5,7 @@
 		"12.5": "https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/raw/master/Developer%20Disk%20Image/12.4%20(16G77)/DeveloperDiskImage.dmg",
 		"14.6": "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/iPhoneOS.platform/DeviceSupport/14.5.zip",
 		"14.7": "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/iPhoneOS.platform/DeviceSupport/14.5.zip",
-		"14.8": "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/iPhoneOS.platform/DeviceSupport/14.5.zip"
+		"14.8": "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/raw/master/DiskImages/iPhoneOS.platform/DeviceSupport/14.5.zip",
+		"15.0": "https://github.com/master131/iFakeLocation/releases/download/v1.5.0/iPhone-iPadOS-15.0.zip"
 	}
 }
