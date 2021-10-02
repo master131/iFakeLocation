@@ -5,21 +5,21 @@
 ## Requirements:
 ### Windows:
 * .NET Framework 4.5 or newer (pre-installed on Windows 8 & Windows 10)  
-  https://dotnet.microsoft.com/download/dotnet-framework
+https://dotnet.microsoft.com/download/dotnet-framework
 
-* iTunes (Microsoft Store version or Win32/Win64 is fine)
-  https://www.apple.com/itunes/download/
+* iTunes (Microsoft Store version or Win32/Win64 is fine)  
+https://www.apple.com/itunes/download/
   
 * Visual C++ Redistributable for Visual Studio 2015  
-  https://www.microsoft.com/en-us/download/details.aspx?id=48145
+https://www.microsoft.com/en-us/download/details.aspx?id=48145
   
 ### Mac OSX:
-* .NET 5.0 Runtime (macOS 10.13 "High Sierra" or newer)
-  https://dotnet.microsoft.com/download/dotnet/thank-you/runtime-5.0.10-macos-x64-installer
+* .NET 5.0 Runtime (macOS 10.13 "High Sierra" or newer)  
+https://dotnet.microsoft.com/download/dotnet/thank-you/runtime-5.0.10-macos-x64-installer
 
 ### Ubuntu:
-* .NET 5.0 Runtime (only dotnet-runtime-5.0 package is required)
-  https://docs.microsoft.com/en-gb/dotnet/core/install/linux-ubuntu
+* .NET 5.0 Runtime (only dotnet-runtime-5.0 package is required)  
+https://docs.microsoft.com/en-gb/dotnet/core/install/linux-ubuntu
   
 ## Download:
 See the [Releases](https://github.com/master131/iFakeLocation/releases) page.
