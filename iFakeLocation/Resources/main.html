@@ -42,7 +42,7 @@
 			
 			<p><small>Click and drag to move the map. Use the mouse wheel or +/- buttons to zoom. Double-click anywhere (or drag the existing marker) to manually select a location.</small></p>
 			
-			<form>
+			<form id="locationSearch">
 				<div class="mb-3">
 					<div class="row align-items-center">
 						<div class="col-md-auto">
@@ -318,9 +318,8 @@
 				if (devices && devices.length)
 					$('#set-location').removeAttr('disabled');
 			});
-			
-			// Handle search button
-			$('#search').click(function() {
+
+			function searchLocation() {
 				if (!$('#query').val())
 					return;
 				$('#search').attr('disabled', true);
@@ -336,6 +335,13 @@
 							$('#set-location').removeAttr('disabled');
 					}
 				});
+			}
+			
+			// Handle search button
+			$('#search').click(searchLocation);
+			$('#locationSearch').submit(function(e) {
+				e.preventDefault();
+				searchLocation();
 			});
 			
 			// Disable double-click zooming

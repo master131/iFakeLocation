@@ -5,14 +5,15 @@ using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Globalization;
 using System.Collections.Generic;
 using iMobileDevice;
 using Newtonsoft.Json;
 using ICSharpCode.SharpZipLib.Zip;
+using System.Runtime.InteropServices;
 
-namespace iFakeLocation {
+namespace iFakeLocation
+{
     class Program {
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         class EndpointMethod : Attribute {
@@ -49,7 +50,7 @@ namespace iFakeLocation {
                 Process.Start(url);
             }
             catch {
-#if NETCOREAPP2_2
+#if NET
                 // hack because of this: https://github.com/dotnet/corefx/issues/10361
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                     url = url.Replace("&", "^&");
@@ -64,7 +65,7 @@ namespace iFakeLocation {
                 else {
 #endif
                     throw;
-#if NETCOREAPP2_2
+#if NET
                 }
 #endif
             }
