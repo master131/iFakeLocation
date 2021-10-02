@@ -7,19 +7,19 @@
 * .NET Framework 4.5 or newer (pre-installed on Windows 8 & Windows 10)  
   https://dotnet.microsoft.com/download/dotnet-framework
 
-* iTunes (Microsoft Store version or Win32/Win64 is fine)  
+* iTunes (Microsoft Store version or Win32/Win64 is fine)
   https://www.apple.com/itunes/download/
   
 * Visual C++ Redistributable for Visual Studio 2015  
   https://www.microsoft.com/en-us/download/details.aspx?id=48145
   
 ### Mac OSX:
-* .NET Core 2.2 (macOS 10.12 "Sierra" or newer)  
-  https://dotnet.microsoft.com/download/thank-you/dotnet-runtime-2.2.3-macos-x64-installer
+* .NET 5.0 Runtime (macOS 10.13 "High Sierra" or newer)
+  https://dotnet.microsoft.com/download/dotnet/thank-you/runtime-5.0.10-macos-x64-installer
 
 ### Ubuntu:
-* .NET Core 2.2  
-  https://dotnet.microsoft.com/download/linux-package-manager/ubuntu16-04/runtime-2.2.3
+* .NET 5.0 Runtime (only dotnet-runtime-5.0 package is required)
+  https://docs.microsoft.com/en-gb/dotnet/core/install/linux-ubuntu
   
 ## Download:
 See the [Releases](https://github.com/master131/iFakeLocation/releases) page.
@@ -33,8 +33,8 @@ Open the DMG and drag the application to the Desktop or Applications folder. Dou
 
 ### Ubuntu
 ```
-chmod +x iFakeLocation
-./iFakeLocation
+chmod +x iFakeLocation.sh
+./iFakeLocation.sh
 ```
 
 ## How to make it work on iOS X.X?
