@@ -66,6 +66,9 @@ https://github.com/haikieu/xcode-developer-disk-image-all-platforms/tree/master/
 Q: My device doesn't show up on the list?  
 A: Ensure that it is plugged in, you have trusted your PC and that the device is visible on iTunes.
 
+Q: Help, it says that it can't mount the image or some other generic error?
+A: Make sure your iDevice is trusted with the PC/Mac and if everything you've tried is not working, usually a reboot of your device will fix the issue.
+
 ## Special Thanks:
 * [idevicelocation by JonGabilondoAngulo](https://github.com/JonGabilondoAngulo/idevicelocation)
 * [Xcode-iOS-Developer-Disk-Image by xushuduo](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/)
