@@ -69,6 +69,13 @@ A: Ensure that it is plugged in, you have trusted your PC and that the device is
 Q: Help, it says that it can't mount the image or some other generic error?  
 A: Make sure your iDevice is trusted with the PC/Mac and if everything you've tried is not working, usually a reboot of your device will fix the issue.
 
+Q: Unable to load shared library 'imobiledevice' or one of its dependencies
+A: set environment variable `DYLD_LIBRARY_PATH` to the folder which has the `libimobiledevice` files, and run the project with specified framework and runtime, e.g.
+```shell
+export DYLD_LIBRARY_PATH=$HOME/iFakeLocation/iFakeLocation/bin/Debug/net6.0/runtimes/osx-x64/native
+dotnet run --project ./iFakeLocation/iFakeLocation.csproj --framework net6.0 --runtime osx-x64
+```
+
 ## Special Thanks:
 * [idevicelocation by JonGabilondoAngulo](https://github.com/JonGabilondoAngulo/idevicelocation)
 * [Xcode-iOS-Developer-Disk-Image by xushuduo](https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/)
