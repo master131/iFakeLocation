@@ -45,6 +45,9 @@ Create a folder called "DeveloperImages" (next to the iFakeLocation executable) 
 https://github.com/haikieu/xcode-developer-disk-image-all-platforms/tree/master/DiskImages/iPhoneOS.platform/DeviceSupport
 
 ## How to use:
+
+**If you are on iOS 16 or newer, make sure that you have enabled Developer Mode on your iDevice first under Settings > Privacy & Security.**
+
 * Connect your iDevice to your computer. Click the "Refresh" button and select your iDevice from the list.
 
 * Enter the desired location (ie. Sydney NSW) in the box and hit "Search" (try to be
@@ -67,7 +70,7 @@ Q: My device doesn't show up on the list?
 A: Ensure that it is plugged in, you have trusted your PC and that the device is visible on iTunes.
 
 Q: Help, it says that it can't mount the image or some other generic error?  
-A: Make sure your iDevice is trusted with the PC/Mac and if everything you've tried is not working, usually a reboot of your device will fix the issue.
+A: Make sure your iDevice is trusted with the PC/Mac and if everything you've tried is not working, usually a reboot of your device will fix the issue
 
 Q: Unable to load shared library 'imobiledevice' or one of its dependencies
 A: set environment variable `DYLD_LIBRARY_PATH` to the folder which has the `libimobiledevice` files, and run the project with specified framework and runtime, e.g.
