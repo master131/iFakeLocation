@@ -14,11 +14,11 @@ https://www.apple.com/itunes/download/
 https://www.microsoft.com/en-us/download/details.aspx?id=48145
   
 ### Mac OSX:
-* .NET 5.0 Runtime (macOS 10.13 "High Sierra" or newer)  
-https://dotnet.microsoft.com/download/dotnet/thank-you/runtime-5.0.10-macos-x64-installer
+* .NET 6.0 Runtime (macOS 10.13 "High Sierra" or newer)  
+https://dotnet.microsoft.com/en-us/download/dotnet/6.0
 
 ### Ubuntu:
-* .NET 5.0 Runtime (only dotnet-runtime-5.0 package is required)  
+* .NET 6.0 Runtime (only dotnet-runtime-5.0 package is required)  
 https://docs.microsoft.com/en-gb/dotnet/core/install/linux-ubuntu
   
 ## Download:
