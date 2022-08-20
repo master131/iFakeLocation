@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net4.5;net5.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>net4.5;net6.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>1.6</Version>
+    <Version>1.7</Version>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
@@ -22,6 +22,7 @@
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="SharpZipLib" Version="1.3.3" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
 
 </Project>

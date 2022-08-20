@@ -7,6 +7,7 @@ using System.Threading;
 using System.Linq;
 using System.Globalization;
 using System.Collections.Generic;
+using System.Net.Http;
 using iMobileDevice;
 using Newtonsoft.Json;
 using ICSharpCode.SharpZipLib.Zip;
@@ -143,22 +144,19 @@ namespace iFakeLocation
             public float Progress { get; set; }
             public Exception Error { get; set; }
             public bool Done { get; set; }
-            public WebClient WebClient { get; }
+            public HttpClient HttpClient { get; }
 
             public event EventHandler<EventArgs> DownloadCompleted;
 
             public DownloadState(string[] links, string[] paths) {
                 Links = links;
                 Paths = paths;
-                WebClient = new WebClient();
-                WebClient.DownloadProgressChanged += WebClient_DownloadProgressChanged;
-                WebClient.DownloadFileCompleted += WebClient_DownloadFileCompleted;
+                HttpClient = new HttpClient();
             }
 
-            private void WebClient_DownloadFileCompleted(object sender,
-                System.ComponentModel.AsyncCompletedEventArgs e) {
-                if (e.Error != null) {
-                    Error = e.Error;
+            private void DownloadFileCompleted(Exception e) {
+                if (e != null) {
+                    Error = e;
                 }
                 else {
                     try {
@@ -181,8 +179,50 @@ namespace iFakeLocation
                 }
             }
 
-            private void WebClient_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e) {
-                Progress = e.ProgressPercentage;
+            private void DownloadAsync(Uri uri, string destinationPath) {
+                HttpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead)
+                    .ContinueWith(response => {
+                        if (response.IsFaulted) {
+                            DownloadFileCompleted(response.Exception);
+                            return;
+                        }
+
+                        var contentLength = response.Result.Content.Headers.ContentLength;
+                        response.Result.Content.ReadAsStreamAsync().ContinueWith(result => {
+                            if (result.IsFaulted) {
+                                DownloadFileCompleted(result.Exception);
+                                return;
+                            }
+
+                            var stream = result.Result;
+
+                            // Check if progress reporting can be done
+                            try {
+                                using (var destStream = File.OpenWrite(destinationPath)) {
+                                    if (!contentLength.HasValue) {
+                                        stream.CopyTo(destStream);
+                                        DownloadFileCompleted(null);
+                                        return;
+                                    }
+
+                                    // Download the file and report ongoing progress
+                                    var buffer = new byte[8192];
+                                    long totalBytesRead = 0;
+                                    int bytesRead;
+                                    while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) != 0) {
+                                        destStream.Write(buffer, 0, bytesRead);
+                                        totalBytesRead += bytesRead;
+                                        Progress = (float)totalBytesRead / contentLength.Value * 100.0f;
+                                    }
+                                }
+                                
+                                DownloadFileCompleted(null);
+                            }
+                            catch (Exception ex) {
+                                DownloadFileCompleted(ex);
+                            }
+                        });
+                    });
             }
 
             private void ProcessNext() {
@@ -190,16 +230,12 @@ namespace iFakeLocation
                 var p = Path.GetDirectoryName(Paths[CurrentIndex]);
                 if (!string.IsNullOrEmpty(p) && !Directory.Exists(p))
                     Directory.CreateDirectory(p);
-                WebClient.DownloadFileAsync(new Uri(Links[CurrentIndex]), Paths[CurrentIndex] + ".incomplete");
+                DownloadAsync(new Uri(Links[CurrentIndex]), Paths[CurrentIndex] + ".incomplete");
             }
 
             public void Start() {
                 if (CurrentIndex < Links.Length)
                     ProcessNext();
-            }
-
-            public void Stop() {
-                WebClient.CancelAsync();
             }
         }
 
@@ -283,7 +319,17 @@ namespace iFakeLocation
                     }
                     else {
                         try {
-                            if (DeveloperImageHelper.HasImageForDevice(device, out var p)) {
+                            // Check if developer mode toggle is visible (on >= iOS 16)
+                            if (device.GetDeveloperModeToggleState() ==
+                                DeviceInformation.DeveloperModeToggleState.Hidden) {
+                                device.EnableDeveloperModeToggle();
+                                SetResponse(ctx,
+                                    new {
+                                        error = "Please turn on Developer Mode first via Setings >> Privacy & Security."
+                                    });
+                            }
+                            // Ensure the developer image exists
+                            else if (DeveloperImageHelper.HasImageForDevice(device, out var p)) {
                                 device.EnableDeveloperMode(p[0], p[1]);
                                 device.SetLocation(new PointLatLng {Lat = data.lat, Lng = data.lng});
                                 SetResponse(ctx, new {success = true});

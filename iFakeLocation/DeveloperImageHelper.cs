@@ -1,22 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using Newtonsoft.Json.Linq;
 
 namespace iFakeLocation {
     static class DeveloperImageHelper {
-        private class WebClientEx : WebClient {
-            protected override WebRequest GetWebRequest(Uri address) {
-                HttpWebRequest request = base.GetWebRequest(address) as HttpWebRequest;
-                if (request != null)
-                    request.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip;
-                return request;
-            }
-        }
-
-        private static readonly WebClient WebClient = new WebClientEx();
+        private static readonly HttpClient HttpClient = new HttpClient(new HttpClientHandler() { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate });
         private static readonly Dictionary<string, string> VersionToImageUrlLegacy = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> VersionToImageUrlZip = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> VersionToImageUrlOverride = new Dictionary<string, string>();
@@ -61,10 +53,11 @@ namespace iFakeLocation {
             if (VersionToImageUrlLegacy.Count == 0) {
                 string treeList = "795fc91f28cb3884edc45b876482911c797de85c";
                 try {
-                    WebClient.Headers["Accept-Encoding"] = "gzip, deflate";
-                    WebClient.Headers["X-Requested-With"] = "XMLHttpRequest";
-                    var resp = WebClient.DownloadString(
-                        "https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/find/master?_pjax=%23js-repo-pjax-container");
+                    HttpClient.DefaultRequestHeaders.Clear();
+                    HttpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
+                    HttpClient.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+                    var resp = HttpClient.GetStringAsync(
+                        "https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/find/master?_pjax=%23js-repo-pjax-container").Result;
                     var tl = "/tree-list/";
                     var idx = resp.IndexOf(tl, StringComparison.InvariantCultureIgnoreCase);
                     if (idx != -1)
@@ -74,12 +67,14 @@ namespace iFakeLocation {
                 }
 
                 try {
-                    WebClient.Headers["Accept"] = "application/json";
-                    WebClient.Headers["Accept-Encoding"] = "gzip, deflate";
-                    WebClient.Headers["X-Requested-With"] = "XMLHttpRequest";
+                    HttpClient.DefaultRequestHeaders.Clear();
+                    HttpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+                    HttpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
+                    HttpClient.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
                     var response =
-                        WebClient.DownloadString("https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/tree-list/" +
-                                                 treeList);
+                        HttpClient.GetStringAsync(
+                            "https://github.com/xushuduo/Xcode-iOS-Developer-Disk-Image/tree-list/" +
+                            treeList).Result;
                     var paths = response.Split('"')
                         .Where(s => s.EndsWith(".dmg", StringComparison.InvariantCultureIgnoreCase)).ToArray();
                     foreach (var path in paths)
@@ -92,10 +87,12 @@ namespace iFakeLocation {
             if (VersionToImageUrlZip.Count == 0) {
                 string treeList = "89cdf804bd416d0d6ba3f958b5c6d086cb914fa1";
                 try {
-                    WebClient.Headers["Accept-Encoding"] = "gzip, deflate";
-                    WebClient.Headers["X-Requested-With"] = "XMLHttpRequest";
-                    var resp = WebClient.DownloadString(
-                        "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/find/master?_pjax=%23js-repo-pjax-container");
+                    HttpClient.DefaultRequestHeaders.Clear();
+                    HttpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
+                    HttpClient.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+                    var resp = HttpClient.GetStringAsync(
+                            "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/find/master?_pjax=%23js-repo-pjax-container")
+                        .Result;
                     var tl = "/tree-list/";
                     var idx = resp.IndexOf(tl, StringComparison.InvariantCultureIgnoreCase);
                     if (idx != -1)
@@ -105,12 +102,14 @@ namespace iFakeLocation {
                 }
 
                 try {
-                    WebClient.Headers["Accept"] = "application/json";
-                    WebClient.Headers["Accept-Encoding"] = "gzip, deflate";
-                    WebClient.Headers["X-Requested-With"] = "XMLHttpRequest";
+                    HttpClient.DefaultRequestHeaders.Clear();
+                    HttpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+                    HttpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
+                    HttpClient.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
                     var response =
-                        WebClient.DownloadString("https://github.com/haikieu/xcode-developer-disk-image-all-platforms/tree-list/" +
-                                                 treeList);
+                        HttpClient.GetStringAsync(
+                            "https://github.com/haikieu/xcode-developer-disk-image-all-platforms/tree-list/" +
+                            treeList).Result;
                     var paths = response.Split('"')
                         .Where(s => s.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase) &&
                                           s.IndexOf("iPhoneOS", StringComparison.InvariantCulture) >= 0).ToArray();
@@ -129,9 +128,10 @@ namespace iFakeLocation {
 		
             if (VersionToImageUrlOverride.Count == 0) {
                 try {
-                    WebClient.Headers["Accept-Encoding"] = "gzip, deflate";
+                    HttpClient.DefaultRequestHeaders.Clear();
+                    HttpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
                     var response =
-                        JObject.Parse(WebClient.DownloadString("https://raw.githubusercontent.com/master131/iFakeLocation/master/updates.json"));
+                        JObject.Parse(HttpClient.GetStringAsync("https://raw.githubusercontent.com/master131/iFakeLocation/master/updates.json").Result);
                     foreach (var kvp in response.SelectToken("images").ToObject<Dictionary<string, string>>())
                         VersionToImageUrlOverride.Add(kvp.Key, kvp.Value);
                 } catch {

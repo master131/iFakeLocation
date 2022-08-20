@@ -42,6 +42,13 @@
 			
 			<p><small>Click and drag to move the map. Use the mouse wheel or +/- buttons to zoom. Double-click anywhere (or drag the existing marker) to manually select a location.</small></p>
 			
+			<p><div class="form-check">
+				<input class="form-check-input" type="checkbox" value="" id="mapProviderAlt">
+				<label class="form-check-label" for="flexCheckDefault">
+					Use alternative map tile server
+				</label>
+			</div></p>
+			
 			<form id="locationSearch">
 				<div class="mb-3">
 					<div class="row align-items-center">
@@ -348,7 +355,21 @@
 			map.doubleClickZoom.disable();
 			
 			// Set the OSM basemap layer
-			L.tileLayer.provider('OpenStreetMap.Mapnik').addTo(map);
+			var defaultProvider = function() {
+				L.tileLayer.provider('OpenStreetMap.Mapnik').addTo(map);
+			};
+			defaultProvider();
+
+			// Provider toggle for OSM basemap layer (ie. due to rate limiting or IP block)
+			$('#mapProviderAlt').change(function() {
+				if (this.checked) {
+					L.tileLayer('https://tile.osm.ch/switzerland/{z}/{x}/{y}.png', {
+						attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+					}).addTo(map);
+				} else {
+                    defaultProvider();
+				}
+			});
 			
 			// Initialise the map to the user's home country
 			fetch('/home_country').then(function(e) {
