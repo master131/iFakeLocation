@@ -46,8 +46,6 @@ https://github.com/haikieu/xcode-developer-disk-image-all-platforms/tree/master/
 
 ## How to use:
 
-**If you are on iOS 16 or newer, make sure that you have enabled Developer Mode on your iDevice first under Settings > Privacy & Security.**
-
 * Connect your iDevice to your computer. Click the "Refresh" button and select your iDevice from the list.
 
 * Enter the desired location (ie. Sydney NSW) in the box and hit "Search" (try to be
