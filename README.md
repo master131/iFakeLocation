@@ -18,7 +18,7 @@ https://www.microsoft.com/en-us/download/details.aspx?id=48145
 https://dotnet.microsoft.com/en-us/download/dotnet/6.0
 
 ### Ubuntu:
-* .NET 6.0 Runtime (only dotnet-runtime-5.0 package is required)  
+* .NET 6.0 Runtime (only dotnet-runtime-6.0 package is required)  
 https://docs.microsoft.com/en-gb/dotnet/core/install/linux-ubuntu
   
 ## Download:
