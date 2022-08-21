@@ -33,8 +33,12 @@ Open the DMG and drag the application to the Desktop or Applications folder. Dou
 
 ### Ubuntu
 ```
-chmod +x iFakeLocation.sh
-./iFakeLocation.sh
+chmod +x ./iFakeLocation
+./iFakeLocation
+
+# or
+
+dotnet ./iFakeLocation.dll
 ```
 
 ## How to make it work on iOS X.X?
