@@ -14,7 +14,7 @@ https://www.apple.com/itunes/download/
 https://www.microsoft.com/en-us/download/details.aspx?id=48145
   
 ### Mac OSX:
-* .NET 6.0 Runtime (macOS 10.13 "High Sierra" or newer)  
+* .NET 6.0 Runtime (macOS 10.13 "High Sierra" or newer) - **make sure it's the x64 version, even if you have an M1/M2 Mac**
 https://dotnet.microsoft.com/en-us/download/dotnet/6.0
 
 ### Ubuntu:
