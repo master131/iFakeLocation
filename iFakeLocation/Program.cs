@@ -325,7 +325,7 @@ namespace iFakeLocation
                                 device.EnableDeveloperModeToggle();
                                 SetResponse(ctx,
                                     new {
-                                        error = "Please turn on Developer Mode first via Setings >> Privacy & Security."
+                                        error = "Please turn on Developer Mode first via Settings >> Privacy & Security on your device."
                                     });
                             }
                             // Ensure the developer image exists
