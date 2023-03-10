@@ -32,7 +32,7 @@ namespace iFakeLocation
 
             for (port = MinPort; port < MaxPort; port++) {
                 httpListener = new HttpListener();
-                httpListener.Prefixes.Add($"http://localhost:{port}/");
+                httpListener.Prefixes.Add($"http://*:{port}/");
                 try {
                     httpListener.Start();
                     return true;
