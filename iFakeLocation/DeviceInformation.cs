@@ -740,7 +740,7 @@ namespace iFakeLocation {
             return (byte[]) tssResponse["ApImg4Ticket"];
         }
 
-        private unsafe byte[] QueryPersonalizationManifest(PropertyListServiceClientHandle propListServiceHandle, string imageType, byte[] signature) {
+        private byte[] QueryPersonalizationManifest(PropertyListServiceClientHandle propListServiceHandle, string imageType, byte[] signature) {
             var plist = LibiMobileDevice.Instance.Plist;
 
             var plistHandle = plist.plist_new_dict();
@@ -752,11 +752,8 @@ namespace iFakeLocation {
                         plist.plist_new_string(imageType));
                 plist.plist_dict_set_item(plistHandle, "ImageType",
                     plist.plist_new_string(imageType));
-
-                fixed (byte* ptr = signature) {
-                    plist.plist_dict_set_item(plistHandle, "ImageSignature",
-                        plist.plist_new_data(new string((sbyte*)ptr, 0, signature.Length), (ulong)signature.Length));
-                }
+                plist.plist_dict_set_item(plistHandle, "ImageSignature",
+                    NativeMethods.plist_new_data(signature, signature.Length));
 
                 var result = SendRecvPlist(propListServiceHandle, plistHandle);
                 if (!result.ContainsKey("ImageSignature"))
@@ -770,7 +767,7 @@ namespace iFakeLocation {
             }
         }
 
-        private unsafe void UploadPersonalizedImage(PropertyListServiceClientHandle propListServiceHandle, string imageType,
+        private void UploadPersonalizedImage(PropertyListServiceClientHandle propListServiceHandle, string imageType,
             byte[] image, byte[] signature) {
             var plist = LibiMobileDevice.Instance.Plist;
 
@@ -784,10 +781,8 @@ namespace iFakeLocation {
                     plist.plist_new_string(imageType));
                 plist.plist_dict_set_item(plistHandle, "ImageSize",
                     plist.plist_new_uint((uint) image.Length));
-                fixed (byte* ptr = signature) {
-                    plist.plist_dict_set_item(plistHandle, "ImageSignature",
-                        plist.plist_new_data(new string((sbyte*)ptr, 0, signature.Length), (ulong)signature.Length));
-                }
+                plist.plist_dict_set_item(plistHandle, "ImageSignature",
+                    NativeMethods.plist_new_data(signature, signature.Length));
 
                 var result = SendRecvPlist(propListServiceHandle, plistHandle);
                 if (!result.ContainsKey("Status") || (string)result["Status"] != "ReceiveBytesAck")
@@ -804,7 +799,7 @@ namespace iFakeLocation {
             }
         }
 
-        private unsafe void MountPersonalizedImage(PropertyListServiceClientHandle propListServiceHandle, string imageType, byte[] signature,
+        private void MountPersonalizedImage(PropertyListServiceClientHandle propListServiceHandle, string imageType, byte[] signature,
             Action<IPlistApi, PlistHandle> extraPropsAction = null) {
             var plist = LibiMobileDevice.Instance.Plist;
 
@@ -816,10 +811,8 @@ namespace iFakeLocation {
                     plist.plist_new_string("MountImage"));
                 plist.plist_dict_set_item(plistHandle, "ImageType",
                     plist.plist_new_string(imageType));
-                fixed (byte* ptr = signature) {
-                    plist.plist_dict_set_item(plistHandle, "ImageSignature",
-                        plist.plist_new_data(new string((sbyte*)ptr, 0, signature.Length), (ulong)signature.Length));
-                }
+                plist.plist_dict_set_item(plistHandle, "ImageSignature",
+                    NativeMethods.plist_new_data(signature, signature.Length));
 
                 // Augment plist if required
                 if (extraPropsAction != null) {
@@ -869,7 +862,7 @@ namespace iFakeLocation {
             }
         }
 
-        private unsafe void EnableDeveloperModeViaPersonalizedImage(string imagePath, string buildManifestPath, string trustCachePath, bool useExistingManifest = true) {
+        private void EnableDeveloperModeViaPersonalizedImage(string imagePath, string buildManifestPath, string trustCachePath, bool useExistingManifest = true) {
             if (!File.Exists(imagePath) || !File.Exists(buildManifestPath) || !File.Exists(trustCachePath))
                 throw new FileNotFoundException("The specified device image files do not exist.");
 
@@ -953,10 +946,8 @@ namespace iFakeLocation {
                 // Mount the image
                 MountPersonalizedImage(propListServiceHandle, "Personalized", manifest, (plist, plistHandle) => {
                     var trustCache = File.ReadAllBytes(trustCachePath);
-                    fixed (byte* ptr = trustCache) {
-                        plist.plist_dict_set_item(plistHandle, "ImageTrustCache",
-                            plist.plist_new_data(new string((sbyte*)ptr, 0, trustCache.Length), (ulong)trustCache.Length));
-                    } 
+                    plist.plist_dict_set_item(plistHandle, "ImageTrustCache",
+                        NativeMethods.plist_new_data(trustCache, trustCache.Length));
                 });
             }
             finally {
