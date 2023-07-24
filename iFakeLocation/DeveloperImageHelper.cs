@@ -15,6 +15,17 @@ namespace iFakeLocation {
 
         private const string ImagePath = "DeveloperImages";
 
+        private static readonly string[] MobileImageFileList = new[] {
+            "DeveloperDiskImage.dmg",
+            "DeveloperDiskImage.dmg.signature"
+        };
+
+        private static readonly string[] PersonalisedImageFileList = new[] {
+            "Image.dmg",
+            "BuildManifest.plist",
+            "Image.dmg.trustcache"
+        };
+
         public static bool HasImageForDevice(DeviceInformation device) {
             string[] p;
             return HasImageForDevice(device, out p);
@@ -30,20 +41,38 @@ namespace iFakeLocation {
             return VersionMapping.ContainsKey(v) ? VersionMapping[v] : v;
         }
 
+        public static bool IsKnownImageFileName(string fileName) {
+            fileName = fileName.Split('/', '\\').Last();
+            return MobileImageFileList.Contains(fileName) || PersonalisedImageFileList.Contains(fileName);
+        }
+
         private static bool ImageExists(string[] paths) {
-            return paths.Length == 2 && File.Exists(paths[0]) && File.Exists(paths[1]);
+            return paths.All(File.Exists);
         }
 
         public static bool HasImageForDevice(DeviceInformation device, out string[] paths) {
             var verStr = GetSoftwareVersion(device);
-            var a = Path.Combine(ImagePath, verStr, "DeveloperDiskImage.dmg");
-            var b = a + ".signature";
+
+            var expectedFiles = int.Parse(verStr.Split('.')[0]) >= 17
+                ? PersonalisedImageFileList.Select(p => (object)Path.Combine(ImagePath, verStr, p)).ToArray()
+                : MobileImageFileList.Select(p => (object)Path.Combine(ImagePath, verStr, p)).ToArray();
+            
             var s = Path.DirectorySeparatorChar;
-            return ImageExists(paths = new[] {a, b}) ||
-                   ImageExists(paths = new[] {$".{s}..{s}{a}",
-                                              $".{s}..{s}{b}"}) ||
-                   ImageExists(paths = new[] {$".{s}..{s}..{s}{a}",
-                                              $".{s}..{s}..{s}{b}"});
+            string[][] pathPatterns = new[] {
+                new[] { "{0}", "{1}", "{2}" },
+                new[] { $".{s}..{s}{{0}}", $".{s}..{s}{{1}}", $".{s}..{s}{{2}}" },
+                new[] { $".{s}..{s}..{s}{{0}}", $".{s}..{s}..{s}{{1}}", $".{s}..{s}..{s}{{2}}" }
+            };
+
+            foreach (var pathPattern in pathPatterns) {
+                if (ImageExists(paths = pathPattern.Take(expectedFiles.Length)
+                        .Select(pattern => string.Format(pattern, expectedFiles)).ToArray())) {
+                    return true;
+                }
+            }
+
+            paths = null;
+            return false;
         }
 
         public static Tuple<string, string>[] GetLinksForDevice(DeviceInformation device) {

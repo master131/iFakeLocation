@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using iMobileDevice;
 using iMobileDevice.Afc;
@@ -66,6 +67,10 @@ namespace iFakeLocation {
             {"iPhone14,4", "iPhone 13 Mini"},
             {"iPhone14,5", "iPhone 13"},
             {"iPhone14,6", "iPhone SE 3rd Gen"},
+            {"iPhone14,7", "iPhone 14"},
+            {"iPhone14,8", "iPhone 14 Plus"},
+            {"iPhone15,2", "iPhone 14 Pro"},
+            {"iPhone15,3", "iPhone 14 Pro Max"},
 
             {"iPod1,1", "1st Gen iPod"},
             {"iPod2,1", "2nd Gen iPod"},
@@ -150,22 +155,30 @@ namespace iFakeLocation {
             {"iPad13,10", "iPad Pro 12.9 inch 5th Gen"},
             {"iPad13,11", "iPad Pro 12.9 inch 5th Gen"},
             {"iPad13,16", "iPad Air 5th Gen (WiFi)"},
-            {"iPad13,17", "iPad Air 5th Gen (WiFi+Cellular)"}
+            {"iPad13,17", "iPad Air 5th Gen (WiFi+Cellular)"},
+            {"iPad13,18", "iPad 10th Gen"},
+            {"iPad13,19", "iPad 10th Gen"},
+            {"iPad14,3", "iPad Pro 11 inch 4th Gen"},
+            {"iPad14,4", "iPad Pro 11 inch 4th Gen"},
+            {"iPad14,5", "iPad Pro 12.9 inch 6th Gen"},
+            {"iPad14,6", "iPad Pro 12.9 inch 6th Gen"}
         };
 
         public string Name { get; }
         public string UDID { get; }
+        public bool IsNetwork { get; }
         public Dictionary<string, object> Properties { get; private set; }
 
-        private DeviceInformation(string name, string udid) {
+        private DeviceInformation(string name, string udid, bool isNetwork) {
             Name = name;
             UDID = udid;
+            IsNetwork = isNetwork;
             Properties = new Dictionary<string, object>();
         }
 
         private void ReadProperties(PlistHandle node) {
             Properties =
-                PlistReader.ReadPlistDictFromNode(node, new[] {"ProductType", "ProductVersion", "HostAttached"});
+                PlistHelper.ReadPlistDictFromNode(node);
         }
 
         public override string ToString() {
@@ -181,7 +194,7 @@ namespace iFakeLocation {
             if (Properties.ContainsKey("ProductVersion"))
                 sb.Append("; iOS ").Append(Properties["ProductVersion"]);
 
-            sb.Append(')');
+            sb.Append(") [").Append(IsNetwork ? "Wi-Fi" : "USB").Append(']');
             return sb.ToString();
         }
 
@@ -222,7 +235,7 @@ namespace iFakeLocation {
 
             try {
                 // Get device handle
-                if (idevice.idevice_new(out deviceHandle, UDID) != iDeviceError.Success)
+                if (idevice.idevice_new_with_options(out deviceHandle, UDID, (int) (IsNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux)) != iDeviceError.Success)
                     throw new Exception("Unable to open device, is it connected?");
 
                 // Get lockdownd handle
@@ -273,7 +286,7 @@ namespace iFakeLocation {
 
             try {
                 // Get device handle
-                if (idevice.idevice_new(out deviceHandle, UDID) != iDeviceError.Success)
+                if (idevice.idevice_new_with_options(out deviceHandle, UDID, (int) (IsNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux)) != iDeviceError.Success)
                     throw new Exception("Unable to open device, is it connected?");
 
                 // Get lockdownd handle
@@ -315,7 +328,7 @@ namespace iFakeLocation {
                     throw new Exception("Failed to retrieve response after attempting to enable developer mode toggle.");
                 }
 
-                var dict = PlistReader.ReadPlistDictFromNode(plistHandle);
+                var dict = PlistHelper.ReadPlistDictFromNode(plistHandle);
                 if (dict.ContainsKey("Error")) {
                     throw new Exception("Failed to enable the developer mode toggle: " + dict["Error"]);
                 } else if (dict.ContainsKey("success")) {
@@ -345,7 +358,7 @@ namespace iFakeLocation {
             }
         }
 
-        public void EnableDeveloperMode(string deviceImagePath, string deviceImageSignaturePath) {
+        private void EnableDeveloperModeViaMobileImage(string deviceImagePath, string deviceImageSignaturePath) {
             if (!File.Exists(deviceImagePath) || !File.Exists(deviceImageSignaturePath))
                 throw new FileNotFoundException("The specified device image files do not exist.");
 
@@ -369,7 +382,7 @@ namespace iFakeLocation {
 
             try {
                 // Get device handle
-                if (idevice.idevice_new(out deviceHandle, UDID) != iDeviceError.Success)
+                if (idevice.idevice_new_with_options(out deviceHandle, UDID, (int) (IsNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux)) != iDeviceError.Success)
                     throw new Exception("Unable to open device, is it connected?");
 
                 // Get lockdownd handle
@@ -413,7 +426,7 @@ namespace iFakeLocation {
                 if (mounter.mobile_image_mounter_lookup_image(mounterHandle, imageType, out plistHandle) ==
                     MobileImageMounterError.Success) {
                     var results =
-                        PlistReader.ReadPlistDictFromNode(plistHandle, new[] {"ImagePresent", "ImageSignature"});
+                        PlistHelper.ReadPlistDictFromNode(plistHandle, new[] {"ImagePresent", "ImageSignature"});
 
                     // Some iOS use ImagePresent to verify presence, while others use ImageSignature instead
                     // Ensure to check the content of the ImageSignature value as iOS 14 returns a value even
@@ -497,7 +510,7 @@ namespace iFakeLocation {
                     throw new Exception("Unable to mount developer image.");
 
                 // Parse the plist result
-                var result = PlistReader.ReadPlistDictFromNode(plistHandle);
+                var result = PlistHelper.ReadPlistDictFromNode(plistHandle);
                 if (!result.ContainsKey("Status") ||
                     result["Status"] as string != "Complete")
                     throw new Exception("Mount failed with status: " +
@@ -528,6 +541,439 @@ namespace iFakeLocation {
             }
         }
 
+        private static Dictionary<string, object> SendRecvPlist(PropertyListServiceClientHandle propListServiceHandle,
+            PlistHandle plist,
+            bool isXml = true) {
+            var propListService = LibiMobileDevice.Instance.PropertyListService;
+
+            PlistHandle plistOutHandle = null;
+
+            try {
+                if ((isXml ? propListService.property_list_service_send_xml_plist(propListServiceHandle, plist) : 
+                        propListService.property_list_service_send_binary_plist(propListServiceHandle, plist)) !=
+                    PropertyListServiceError.Success) 
+                    throw new Exception("Failed to send the plist to the specified service.");
+
+                if (propListService.property_list_service_receive_plist(propListServiceHandle,
+                        out plistOutHandle) != PropertyListServiceError.Success)
+                    throw new Exception("Failed to receive the plist from the specified service.");
+
+                return PlistHelper.ReadPlistDictFromNode(plistOutHandle);
+            }
+            finally {
+                if (plistOutHandle != null)
+                    plistOutHandle.Close();
+            }
+        }
+
+        private static Dictionary<string, object> SendDataRecvPlist(PropertyListServiceClientHandle propListServiceHandle, byte[] data) {
+            var propListService = LibiMobileDevice.Instance.PropertyListService;
+            var service = LibiMobileDevice.Instance.Service;
+
+            PlistHandle plistOutHandle = null;
+            ServiceClientHandle serviceClientHandle = null;
+
+            try {
+                // Extract the service client from the property_list_service_t->parent value (warning: hacky)
+                // struct property_list_service_client_private {
+                //      service_client_t parent;
+                // };
+                serviceClientHandle = ServiceClientHandle.DangerousCreate(Marshal.ReadIntPtr(propListServiceHandle.DangerousGetHandle()));
+
+                uint sent = 0;
+                if (service.service_send(serviceClientHandle, data, (uint)data.Length, ref sent) !=
+                    ServiceError.Success ||
+                    sent != data.Length) {
+                    throw new Exception("Failed to send the data to the specified service.");
+                }
+
+                if (propListService.property_list_service_receive_plist(propListServiceHandle,
+                        out plistOutHandle) != PropertyListServiceError.Success)
+                    throw new Exception("Failed to receive the plist from the specified service.");
+
+                return PlistHelper.ReadPlistDictFromNode(plistOutHandle);
+            }
+            finally {
+                // Ensure CLR does not attempt to close the handle during destruction of the SafeFileHandle
+                // since we extracted this handle manually (we will get an exception otherwise during garbage collection)
+                if (serviceClientHandle != null)
+                    serviceClientHandle.SetHandleAsInvalid();
+
+                if (plistOutHandle != null)
+                    plistOutHandle.Close();
+            }
+        }
+
+        private Dictionary<string, object> QueryPersonalizationIdentifiers(PropertyListServiceClientHandle propListServiceHandle) {
+            var plist = LibiMobileDevice.Instance.Plist;
+
+            var plistHandle = plist.plist_new_dict();
+
+            try {
+                plist.plist_dict_set_item(plistHandle, "Command",
+                    plist.plist_new_string("QueryPersonalizationIdentifiers"));
+
+                return SendRecvPlist(propListServiceHandle, plistHandle);
+            }
+            finally {
+                if (plistHandle != null)
+                    plistHandle.Close();
+            }
+        }
+
+        private byte[] QueryNonce(PropertyListServiceClientHandle propListServiceHandle,
+            string personalizedImageType = null) {
+            var plist = LibiMobileDevice.Instance.Plist;
+
+            var plistHandle = plist.plist_new_dict();
+
+            try {
+                plist.plist_dict_set_item(plistHandle, "Command",
+                    plist.plist_new_string("QueryNonce"));
+                if (personalizedImageType != null) {
+                    plist.plist_dict_set_item(plistHandle, "PersonalizedImageType",
+                        plist.plist_new_string(personalizedImageType));
+                }
+
+                var result = SendRecvPlist(propListServiceHandle, plistHandle);
+                if (!result.ContainsKey("PersonalizationNonce"))
+                    throw new Exception("Unable to locate personalization nonce in response.");
+
+                return (byte[])result["PersonalizationNonce"];
+            }
+            finally {
+                if (plistHandle != null)
+                    plistHandle.Close();
+            }
+        }
+
+        private byte[] GetManifestFromTSS(PropertyListServiceClientHandle propListServiceHandle, Dictionary<string, object> buildManifest) {
+            // Obtain the personalization identifiers from the device
+            var identifiers = QueryPersonalizationIdentifiers(propListServiceHandle);
+            if (identifiers == null || !identifiers.ContainsKey("PersonalizationIdentifiers"))
+                throw new Exception("Failed to extract personalization identifiers from the plist response.");
+            var personalizationIdentifiers = (Dictionary<string, object>)identifiers["PersonalizationIdentifiers"];
+
+            var request = new TSSRequest();
+
+            // Pass through any important identifiers to the TSS request
+            foreach (var kvp in personalizationIdentifiers) {
+                if (kvp.Key.StartsWith("Ap,"))
+                    request.Update(kvp.Key, kvp.Value);
+            }
+
+            // Find a matching build identity from the BuildManifest.plist file
+            var boardId = int.Parse(personalizationIdentifiers["BoardId"].ToString());
+            var chipId = int.Parse(personalizationIdentifiers["ChipID"].ToString());
+            Dictionary<string, object> buildIdentity = null;
+            foreach (Dictionary<string, object> identity in (object[])buildManifest["BuildIdentities"]) {
+                var curBoardId = identity.ContainsKey("ApBoardID") ? int.Parse(((string) identity["ApBoardID"]).Replace("0x", ""), NumberStyles.HexNumber) : 0;
+                var curChipId = identity.ContainsKey("ApChipID") ? int.Parse(((string) identity["ApChipID"]).Replace("0x", ""), NumberStyles.HexNumber) : 0;
+                if (curBoardId == boardId && curChipId == chipId) {
+                    buildIdentity = identity;
+                    break;
+                }
+            }
+
+            if (buildIdentity == null)
+                throw new Exception(
+                    "Unable to find a build identity matching the current device in the build manifest.");
+
+            request.Update(new Dictionary<string, object> {
+                {"@ApImg4Ticket", true},
+                {"@BBTicket", true},
+                {"ApBoardID", boardId},
+                {"ApChipID", chipId},
+                {"ApECID", Properties["UniqueChipID"]},
+                {"ApNonce", QueryNonce(propListServiceHandle, "DeveloperDiskImage")},
+                {"ApProductionMode", true},
+                {"ApSecurityDomain", 1},
+                {"ApSecurityMode", true},
+                {"SepNonce", Encoding.ASCII.GetBytes("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")},
+                {"UID_MODE", false}
+            });
+
+            var parameters = new Dictionary<string, object> {
+                {"ApProductionMode", true},
+                {"ApSecurityDomain", 1},
+                {"ApSecurityMode", true},
+                {"ApSupportsImg4", true}
+            };
+
+            var manifest = (Dictionary<string, object>)buildIdentity["Manifest"];
+            foreach (var kvp in manifest) {
+                var manifestEntry = (Dictionary<string, object>)kvp.Value;
+
+                // Only permit trusted items
+                if (!manifestEntry.ContainsKey("Info") || manifestEntry["Info"] == null)
+                    continue;
+                if (!manifestEntry.ContainsKey("Trusted") || !(bool) manifestEntry["Trusted"])
+                    continue;
+
+                var tssEntry = new Dictionary<string, object>(manifestEntry);
+                tssEntry.Remove("Info");
+
+                // Apply the restore request rules
+                if (((Dictionary<string, object>)((Dictionary<string, object>)manifest["LoadableTrustCache"])["Info"])
+                    .ContainsKey("RestoreRequestRules")) {
+                    var rules =
+                        (object[])
+                        ((Dictionary<string, object>)((Dictionary<string, object>)manifest["LoadableTrustCache"])[
+                            "Info"])["RestoreRequestRules"];
+                    if (rules?.Length > 0) {
+                        request.ApplyRestoreRequestRules(tssEntry, parameters, rules.Select(s => (Dictionary<string, object>) s));
+                    }
+                }
+
+                // Ensure a digest always exists
+                if (!manifestEntry.ContainsKey("Digest") || manifestEntry["Digest"] == null) {
+                    tssEntry["Digest"] = Array.Empty<byte>();
+                }
+
+                request.Update(kvp.Key, tssEntry);
+            }
+
+            var tssResponse = request.SendAndReceive();
+            if (!tssResponse.ContainsKey("ApImg4Ticket"))
+                throw new Exception("TSS response did not contain the expected ticket.");
+
+            return (byte[]) tssResponse["ApImg4Ticket"];
+        }
+
+        private unsafe byte[] QueryPersonalizationManifest(PropertyListServiceClientHandle propListServiceHandle, string imageType, byte[] signature) {
+            var plist = LibiMobileDevice.Instance.Plist;
+
+            var plistHandle = plist.plist_new_dict();
+
+            try {
+                plist.plist_dict_set_item(plistHandle, "Command",
+                    plist.plist_new_string("QueryPersonalizationManifest"));
+                plist.plist_dict_set_item(plistHandle, "PersonalizedImageType",
+                        plist.plist_new_string(imageType));
+                plist.plist_dict_set_item(plistHandle, "ImageType",
+                    plist.plist_new_string(imageType));
+
+                fixed (byte* ptr = signature) {
+                    plist.plist_dict_set_item(plistHandle, "ImageSignature",
+                        plist.plist_new_data(new string((sbyte*)ptr, 0, signature.Length), (ulong)signature.Length));
+                }
+
+                var result = SendRecvPlist(propListServiceHandle, plistHandle);
+                if (!result.ContainsKey("ImageSignature"))
+                    throw new KeyNotFoundException("Unable to locate image signature in response.");
+
+                return (byte[])result["ImageSignature"];
+            }
+            finally {
+                if (plistHandle != null)
+                    plistHandle.Close();
+            }
+        }
+
+        private unsafe void UploadPersonalizedImage(PropertyListServiceClientHandle propListServiceHandle, string imageType,
+            byte[] image, byte[] signature) {
+            var plist = LibiMobileDevice.Instance.Plist;
+
+            var plistHandle = plist.plist_new_dict();
+
+            try {
+                // Let the service know we are about to upload an image
+                plist.plist_dict_set_item(plistHandle, "Command",
+                    plist.plist_new_string("ReceiveBytes"));
+                plist.plist_dict_set_item(plistHandle, "ImageType",
+                    plist.plist_new_string(imageType));
+                plist.plist_dict_set_item(plistHandle, "ImageSize",
+                    plist.plist_new_uint((uint) image.Length));
+                fixed (byte* ptr = signature) {
+                    plist.plist_dict_set_item(plistHandle, "ImageSignature",
+                        plist.plist_new_data(new string((sbyte*)ptr, 0, signature.Length), (ulong)signature.Length));
+                }
+
+                var result = SendRecvPlist(propListServiceHandle, plistHandle);
+                if (!result.ContainsKey("Status") || (string)result["Status"] != "ReceiveBytesAck")
+                    throw new Exception("Failed to upload the image to the device: " + (result.ContainsKey("Error") ? result["Error"] : "Unknown error"));
+
+                // Send the image and then read the plist response
+                result = SendDataRecvPlist(propListServiceHandle, image);
+                if (!result.ContainsKey("Status") || (string)result["Status"] != "Complete")
+                    throw new Exception("Failed to validate that the image upload successfully.");
+            }
+            finally {
+                if (plistHandle != null)
+                    plistHandle.Close();
+            }
+        }
+
+        private unsafe void MountPersonalizedImage(PropertyListServiceClientHandle propListServiceHandle, string imageType, byte[] signature,
+            Action<IPlistApi, PlistHandle> extraPropsAction = null) {
+            var plist = LibiMobileDevice.Instance.Plist;
+
+            var plistHandle = plist.plist_new_dict();
+
+            try {
+                // Instruct device to mount previously uploaded image
+                plist.plist_dict_set_item(plistHandle, "Command",
+                    plist.plist_new_string("MountImage"));
+                plist.plist_dict_set_item(plistHandle, "ImageType",
+                    plist.plist_new_string(imageType));
+                fixed (byte* ptr = signature) {
+                    plist.plist_dict_set_item(plistHandle, "ImageSignature",
+                        plist.plist_new_data(new string((sbyte*)ptr, 0, signature.Length), (ulong)signature.Length));
+                }
+
+                // Augment plist if required
+                if (extraPropsAction != null) {
+                    extraPropsAction(plist, plistHandle);
+                }
+
+                var result = SendRecvPlist(propListServiceHandle, plistHandle);
+                
+                if (result.ContainsKey("DetailedError") &&
+                    ((string)result["DetailedError"]).Contains("Developer mode is not enabled")) {
+                    throw new Exception("Developer mode is not enabled on the device.");
+                }
+
+                if (result.ContainsKey("DetailedError") &&
+                    ((string)result["DetailedError"]).Contains("is already mounted"))
+                    return;
+
+                if (!result.ContainsKey("Status") || (string)result["Status"] != "Complete")
+                    throw new Exception("Failed to mount the personalized image.");
+            }
+            finally {
+                if (plistHandle != null)
+                    plistHandle.Close();
+            }
+        }
+
+        private static bool IsPersonalizedImageMounted(PropertyListServiceClientHandle propListServiceHandle, string imageType) {
+            var plist = LibiMobileDevice.Instance.Plist;
+
+            var plistHandle = plist.plist_new_dict();
+
+            try {
+                plist.plist_dict_set_item(plistHandle, "Command",
+                    plist.plist_new_string("LookupImage"));
+                plist.plist_dict_set_item(plistHandle, "ImageType",
+                    plist.plist_new_string(imageType));
+
+                var result = SendRecvPlist(propListServiceHandle, plistHandle);
+                return (result.ContainsKey("ImagePresent") && (bool)result["ImagePresent"]) ||
+                       (result.ContainsKey("ImageSignature") &&
+                        ((result["ImageSignature"] is object[] && ((object[])result["ImageSignature"]).Length > 0) ||
+                         (result["ImageSignature"] is not object[] && result["ImageSignature"] != null)));
+            }
+            finally {
+                if (plistHandle != null)
+                    plistHandle.Close();
+            }
+        }
+
+        private unsafe void EnableDeveloperModeViaPersonalizedImage(string imagePath, string buildManifestPath, string trustCachePath, bool useExistingManifest = true) {
+            if (!File.Exists(imagePath) || !File.Exists(buildManifestPath) || !File.Exists(trustCachePath))
+                throw new FileNotFoundException("The specified device image files do not exist.");
+
+            iDeviceHandle deviceHandle = null;
+            LockdownClientHandle lockdownHandle = null;
+            LockdownServiceDescriptorHandle serviceDescriptor = null;
+            PropertyListServiceClientHandle propListServiceHandle = null;
+
+            void CloseAllHandles() {
+                if (propListServiceHandle != null)
+                    propListServiceHandle.Close();
+
+                if (serviceDescriptor != null)
+                    serviceDescriptor.Close();
+
+                if (lockdownHandle != null)
+                    lockdownHandle.Close();
+
+                if (deviceHandle != null)
+                    deviceHandle.Close();
+
+                propListServiceHandle = null;
+                serviceDescriptor = null;
+                lockdownHandle = null;
+                deviceHandle = null;
+            }
+
+            var idevice = LibiMobileDevice.Instance.iDevice;
+            var lockdown = LibiMobileDevice.Instance.Lockdown;
+            var propListService = LibiMobileDevice.Instance.PropertyListService;
+
+            try {
+                // Get device handle
+                if (idevice.idevice_new_with_options(out deviceHandle, UDID, (int) (IsNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux)) != iDeviceError.Success)
+                    throw new Exception("Unable to open device, is it connected?");
+
+                // Get lockdownd handle
+                if (lockdown.lockdownd_client_new_with_handshake(deviceHandle, out lockdownHandle, "iFakeLocation") !=
+                    LockdownError.Success)
+                    throw new Exception("Unable to connect to lockdownd.");
+
+                // Start image mounter service
+                if (lockdown.lockdownd_start_service(lockdownHandle, "com.apple.mobile.mobile_image_mounter",
+                        out serviceDescriptor) != LockdownError.Success)
+                    throw new Exception("Unable to start the mobile image mounter service.");
+
+                // Create new plist service client
+                if (propListService.property_list_service_client_new(deviceHandle, serviceDescriptor,
+                        out propListServiceHandle) != PropertyListServiceError.Success)
+                    throw new Exception("Failed to obtain a property list service handle.");
+
+                // Sanity check to skip upload/mount
+                if (IsPersonalizedImageMounted(propListServiceHandle, "Personalized"))
+                    return;
+
+                // Obtain the personalization manifest from device, otherwise request a new one
+                byte[] manifest;
+
+                if (useExistingManifest) {
+                    try {
+                        using var imageStream = File.OpenRead(imagePath);
+                        manifest = QueryPersonalizationManifest(propListServiceHandle, "DeveloperDiskImage",
+                            SHA384.Create().ComputeHash(imageStream));
+                    }
+                    catch (KeyNotFoundException) {
+                        // We need to run this function again (without querying for manifest) as service connection will be dead now
+                        CloseAllHandles();
+                        EnableDeveloperModeViaPersonalizedImage(imagePath, buildManifestPath, trustCachePath, false);
+                        return;
+                    }
+                }
+                else {
+                    using var manifestStream = File.OpenRead(buildManifestPath);
+                    manifest = GetManifestFromTSS(propListServiceHandle,
+                        PlistHelper.ReadPlistDictFromStream(manifestStream));
+                }
+
+                // Upload the image to the device
+                UploadPersonalizedImage(propListServiceHandle, "Personalized", File.ReadAllBytes(imagePath), manifest);
+
+                // Mount the image
+                MountPersonalizedImage(propListServiceHandle, "Personalized", manifest, (plist, plistHandle) => {
+                    var trustCache = File.ReadAllBytes(trustCachePath);
+                    fixed (byte* ptr = trustCache) {
+                        plist.plist_dict_set_item(plistHandle, "ImageTrustCache",
+                            plist.plist_new_data(new string((sbyte*)ptr, 0, trustCache.Length), (ulong)trustCache.Length));
+                    } 
+                });
+            }
+            finally {
+                CloseAllHandles();
+            }
+        }
+
+        public void EnableDeveloperMode(string[] fileNames) {
+            // Use personalized image mounter for iOS 17 and above, otherwise use the standard mobile image mounter
+            if (int.Parse(((string)Properties["ProductVersion"]).Split('.')[0]) >= 17) {
+                EnableDeveloperModeViaPersonalizedImage(fileNames[0], fileNames[1], fileNames[2]);
+            }
+            else {
+                EnableDeveloperModeViaMobileImage(fileNames[0], fileNames[1]);
+            }
+        }
+
         private static byte[] ToBytesBE(int i) {
             var b = BitConverter.GetBytes((uint) i);
             if (BitConverter.IsLittleEndian) Array.Reverse(b);
@@ -554,7 +1000,7 @@ namespace iFakeLocation {
 
             try {
                 // Get device handle
-                var err = idevice.idevice_new(out deviceHandle, deviceInfo.UDID);
+                var err = idevice.idevice_new_with_options(out deviceHandle, deviceInfo.UDID, (int) (deviceInfo.IsNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux));
                 if (err != iDeviceError.Success)
                     throw new Exception("Unable to connect to the device. Make sure it is connected.");
 
@@ -621,66 +1067,86 @@ namespace iFakeLocation {
             }
         }
 
-        public static List<DeviceInformation> GetDevices() {
+        public static List<DeviceInformation> GetDevices(bool includeNetwork = true) {
             var idevice = LibiMobileDevice.Instance.iDevice;
             var lockdown = LibiMobileDevice.Instance.Lockdown;
             var plist = LibiMobileDevice.Instance.Plist;
-
-            // Retrieve list of unique device identifiers
-            ReadOnlyCollection<string> uddids;
-            int count = 0;
-            var ret = idevice.idevice_get_device_list(out uddids, ref count);
-            if (ret != iDeviceError.Success)
-                return null;
-
-            iDeviceHandle deviceHandle = null;
-            LockdownClientHandle lockdownHandle = null;
-            PlistHandle plistHandle = null;
-
+            
             var devices = new List<DeviceInformation>();
-            foreach (var udid in uddids.Distinct()) {
-                try {
-                    // Attempt to get device handle of each uuid
-                    var err = idevice.idevice_new(out deviceHandle, udid);
-                    if (err != iDeviceError.Success)
+
+            // Obtain list of pointers to iDeviceInfo structures
+            IntPtr devListPtr = IntPtr.Zero;
+            int count = 0;
+            try {
+                if (idevice.idevice_get_device_list_extended(ref devListPtr, ref count) != iDeviceError.Success)
+                    return null;
+
+                iDeviceHandle deviceHandle = null;
+                LockdownClientHandle lockdownHandle = null;
+                PlistHandle plistHandle = null;
+
+                // Ensure the iDeviceInfo* is not-null
+                IntPtr devListCurPtr = devListPtr;
+                while (devListCurPtr != IntPtr.Zero && 
+                       Marshal.ReadIntPtr(devListCurPtr) != IntPtr.Zero) {
+
+                    // Skip network devices if not enabled
+                    iDeviceInfo info = (iDeviceInfo) Marshal.PtrToStructure(Marshal.ReadIntPtr(devListCurPtr), typeof(iDeviceInfo));
+                    devListCurPtr = IntPtr.Add(devListCurPtr, IntPtr.Size);
+
+                    bool isNetwork = info.conn_type == iDeviceConnectionType.Network;
+                    if (isNetwork && !includeNetwork)
                         continue;
 
-                    // Obtain a lockdown client handle
-                    if (lockdown.lockdownd_client_new_with_handshake(deviceHandle, out lockdownHandle,
-                            "iFakeLocation") !=
-                        LockdownError.Success)
-                        continue;
+                    try {
+                        // Attempt to get device handle of each uuid
+                        var err = idevice.idevice_new_with_options(out deviceHandle, info.udidString,
+                            (int)(isNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux));
+                        if (err != iDeviceError.Success)
+                            continue;
 
-                    // Obtain the device name
-                    string name;
-                    DeviceInformation device;
-                    if (lockdown.lockdownd_get_device_name(lockdownHandle, out name) != LockdownError.Success)
-                        continue;
+                        // Obtain a lockdown client handle
+                        if (lockdown.lockdownd_client_new_with_handshake(deviceHandle, out lockdownHandle,
+                                "iFakeLocation") !=
+                            LockdownError.Success)
+                            continue;
 
-                    device = new DeviceInformation(name, udid);
+                        // Obtain the device name
+                        string name;
+                        DeviceInformation device;
+                        if (lockdown.lockdownd_get_device_name(lockdownHandle, out name) != LockdownError.Success)
+                            continue;
 
-                    // Get device details
-                    if (lockdown.lockdownd_get_value(lockdownHandle, null, null, out plistHandle) !=
-                        LockdownError.Success ||
-                        plist.plist_get_node_type(plistHandle) != PlistType.Dict)
-                        continue;
+                        device = new DeviceInformation(name, info.udidString, isNetwork);
 
-                    device.ReadProperties(plistHandle);
+                        // Get device details
+                        if (lockdown.lockdownd_get_value(lockdownHandle, null, null, out plistHandle) !=
+                            LockdownError.Success ||
+                            plist.plist_get_node_type(plistHandle) != PlistType.Dict)
+                            continue;
 
-                    // Ensure device is attached
-                    if (!device.Properties.ContainsKey("HostAttached") || (bool) device.Properties["HostAttached"])
-                        devices.Add(device);
-                }
-                finally {
-                    // Cleanup
-                    if (plistHandle != null)
-                        plistHandle.Close();
-                    if (lockdownHandle != null)
-                        lockdownHandle.Close();
-                    if (deviceHandle != null)
-                        deviceHandle.Close();
+                        device.ReadProperties(plistHandle);
+
+                        // Ensure device is attached
+                        if (!device.Properties.ContainsKey("HostAttached") || (bool)device.Properties["HostAttached"])
+                            devices.Add(device);
+                    }
+                    finally {
+                        // Cleanup
+                        if (plistHandle != null)
+                            plistHandle.Close();
+                        if (lockdownHandle != null)
+                            lockdownHandle.Close();
+                        if (deviceHandle != null)
+                            deviceHandle.Close();
+                    }
                 }
             }
+            finally {
+                if (devListPtr != IntPtr.Zero)
+                    idevice.idevice_device_list_extended_free(devListPtr);
+            }
+
 
             return devices;
         }

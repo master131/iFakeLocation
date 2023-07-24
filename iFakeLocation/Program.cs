@@ -16,7 +16,7 @@ using System.Runtime.InteropServices;
 namespace iFakeLocation
 {
     class Program {
-        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        [AttributeUsage(AttributeTargets.Method)]
         class EndpointMethod : Attribute {
             public string Name { get; }
 
@@ -284,7 +284,7 @@ namespace iFakeLocation
                     else {
                         try {
                             if (DeveloperImageHelper.HasImageForDevice(device, out string[] p)) {
-                                device.EnableDeveloperMode(p[0], p[1]);
+                                device.EnableDeveloperMode(p);
                                 device.StopLocation();
                                 SetResponse(ctx, new { success = true });
                             }
@@ -330,7 +330,7 @@ namespace iFakeLocation
                             }
                             // Ensure the developer image exists
                             else if (DeveloperImageHelper.HasImageForDevice(device, out var p)) {
-                                device.EnableDeveloperMode(p[0], p[1]);
+                                device.EnableDeveloperMode(p);
                                 device.SetLocation(new PointLatLng {Lat = data.lat, Lng = data.lng});
                                 SetResponse(ctx, new {success = true});
                             }
@@ -361,7 +361,7 @@ namespace iFakeLocation
                     using (var fs = File.OpenRead(file)) {
                         using (var zf = new ZipFile(fs)) {
                             foreach (ZipEntry ze in zf) {
-                                if (!ze.IsFile || !ze.Name.Contains("DeveloperDiskImage.dmg"))
+                                if (!ze.IsFile || !DeveloperImageHelper.IsKnownImageFileName(ze.Name))
                                     continue;
                                 using (var ds = zf.GetInputStream(ze)) {
                                     var dest = Path.Combine(Path.GetDirectoryName(file),
@@ -435,14 +435,6 @@ namespace iFakeLocation
             // Configure paths
             string basePath = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
             Environment.CurrentDirectory = basePath;
-
-            foreach (SecurityProtocolType protocol in Enum.GetValues(typeof(SecurityProtocolType))) {
-                try {
-                    ServicePointManager.SecurityProtocol |= protocol;
-                }
-                catch {
-                }
-            }
 
             try {
                 NativeLibraries.Load();
