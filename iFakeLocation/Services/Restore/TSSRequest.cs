@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 
-namespace iFakeLocation
+namespace iFakeLocation.Services.Restore
 {
+    // Wrapper for Apple Tatsu Signing Server (TSS)
     internal class TSSRequest {
         private const string TSS_CONTROLLER_ACTION_URL = "http://gs.apple.com/TSS/controller?action=2";
         private const string TSS_CLIENT_VERSION_STRING = "libauthinstall-973.0.1";
