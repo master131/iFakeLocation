@@ -15,67 +15,77 @@
 		<link rel="stylesheet" href="leaflet-geosearch.css">
 	</head>
 	<body>
-		<div class="p-3 px-md-4 mb-3 bg-white border-bottom box-shadow">
+		<div class="p-1 px-md-1 mb-3 bg-white border-bottom">
 			<div class="d-flex flex-column align-items-center flex-md-row container">
-				<h4 class="my-0 mr-md-auto font-weight-normal">iFakeLocation</h4>
-				<a id="about-btn" class="btn btn-outline-primary pl-4 pr-4" href="#" title="iFakeLocation">About</a>
-				<a id="exit-btn" class="btn btn-outline-primary pl-4 pr-4 ml-4" href="#" title="iFakeLocation" onclick="window.open('', '_self', ''); window.close();">Exit</a>
+				<h5 class="my-0 mr-md-auto font-weight-normal">iFakeLocation</h5>
+				<a id="about-btn" class="btn-sm btn-outline-primary" href="#" title="iFakeLocation">About</a>
+				<a id="exit-btn" class="btn-sm btn-outline-danger ml-4" href="#" title="iFakeLocation" onclick="window.open('', '_self', ''); window.close();">Exit</a>
 			</div>
 		</div>
 		<div class="container">
 			<form>
 				<div class="mb-3">
-					<label for="device">Device Name:</label><br>
-					<div class="row">
-						<div class="col">
-							<select class="custom-select d-block w-100" id="device" required>
-							</select>
+					<div class="input-group">
+						<div class="input-group-prepend">
+							<label for="device" class="input-group-text" id="inputGroupFileAddon01">Device Name</label>
 						</div>
-						<div class="col-md-auto">
-							<button type="button" class="btn btn-primary pl-4 pr-4" id="refresh">Refresh</button>
-						</div>
-					</div>
-				</div>
-			</form>
-			
-			<div id="map" style="width: 100%; height: 500px; max-height: 70vh"></div>
-			
-			<p><small>Click and drag to move the map. Use the mouse wheel or +/- buttons to zoom. Double-click anywhere (or drag the existing marker) to manually select a location.</small></p>
-			
-			<p><div class="form-check">
-				<input class="form-check-input" type="checkbox" value="" id="mapProviderAlt">
-				<label class="form-check-label" for="flexCheckDefault">
-					Use alternative map tile server
-				</label>
-			</div></p>
-			
-			<form id="locationSearch">
-				<div class="mb-3">
-					<div class="row align-items-center">
-						<div class="col-md-auto">
-							<label class="mb-0" for="device">Location Search:</label>
-						</div>
-						<div class="col">
-							<input type="text" class="form-control" id="query">
-						</div>
-						<div class="col-md-auto">
-							<button type="button" class="btn btn-primary pl-4 pr-4" id="search">Search</button>
+						<select class="custom-select form-control" id="device" required>
+						</select>
+						<div class="input-group-append">
+							<button type="button" class="btn btn-outline-success" id="refresh">Refresh</button>
 						</div>
 					</div>
 				</div>
 			</form>
+			
+			<ul class="list-group mb-3">
+				<li class="list-group-item">
+					<form id="locationSearch">
+						<div class="input-group">
+							<input type="text" class="form-control" id="query" placeholder="Location Search">
+							<div class="input-group-append">
+								<button type="button" class="btn btn-primary" id="search">Search</button>
+							</div>
+						</div>
+					</form>
+				</li>
+				<li class="list-group-item" style="padding: 0;">
+					<div id="map" style="width: 100%; height: 500px; max-height: 70vh"></div>
+				</li>
+				<li class="list-group-item">
+					<p><small>Click and drag to move the map. Use the mouse wheel or +/- buttons to zoom. Double-click anywhere (or drag the existing marker) to manually select a location.</small></p>
+					<details style="font-size: small;">
+						<summary><span class="text-primary">Use other map provider ...</span></summary>
+						<div class="row align-items-center">
+							<div class="col-md-auto">
+								<label>
+									<span>Map tile provider:</span>
+									<select id="mapTileProviderSelect"></select>
+								</label>
+							</div>
+							<div class="col-md-auto">
+								<label>
+									<span>Search provider:</span>
+									<select id="mapSearchProviderSelect"></select>
+								</label>
+							</div>
+						</div>
+					</details>
+				</li>
+			</ul>
 			
 			<div class="mb-3">
 				<div class="row align-items-center">
-					<div class="col">
+					<div class="col-8">
 						<button type="button" class="btn btn-primary w-100" data-toggle="popover" id="set-location" disabled>Set Fake Location</button>
 					</div>
-					<div class="col">
-						<button type="button" class="btn btn-primary w-100" data-toggle="popover" id="stop-location" disabled>Stop Fake Location</button>
+					<div class="col-4">
+						<button type="button" class="btn btn-secondary w-100" data-toggle="popover" id="stop-location" disabled>Stop Fake Location</button>
 					</div>
 				</div>
 			</div>
 		</div>
+		
 		<div id="messageModal" class="modal" tabindex="-1" role="dialog">
 			<div class="modal-dialog modal-dialog-centered" role="document">
 				<div class="modal-content">
@@ -312,10 +322,39 @@
 		</script>
 		<script>
 			// Initialise the OSM provider for searching
-			var provider = new GeoSearch.OpenStreetMapProvider();
+			var provider = new GeoSearch.EsriProvider();
 			var map = L.map('map');
 			var marker = null;
+			var activeTileLayer = null;
 			
+			var MAP_SEARCH_PROVIDERS = ['Esri', 'OpenStreetMap']
+			var MAP_TILE_PROVIDERS = []
+			for (var i of Object.keys(L.TileLayer.Provider.providers)) {
+				// not all OSM is suitable
+				var ALLOWED_PROVIDERS = [ 'Carto', 'Stamen', 'Esri', 'Wikimedia',
+					'OpenStreetMap', 'OpenTopoMap', 'GeoportailFrance', 'OneMapSG' ];
+				var variants = L.TileLayer.Provider.providers[i].variants
+				if (!ALLOWED_PROVIDERS.includes(i)) {
+					continue;
+				}
+				if (!variants) {
+					MAP_TILE_PROVIDERS.push(i);
+					continue;
+				}
+				for (var j of Object.keys(variants)) {
+					MAP_TILE_PROVIDERS.push(i + '.' + j)
+				}
+			}
+			
+			$.each(MAP_SEARCH_PROVIDERS, function(i, name) {
+				$('#mapSearchProviderSelect').append(new Option(name, name));
+			});
+			$('#mapSearchProviderSelect').val(MAP_SEARCH_PROVIDERS[1])
+			$.each(MAP_TILE_PROVIDERS, function(i, name) {
+				$('#mapTileProviderSelect').append(new Option(name, name));
+			});
+			$('#mapTileProviderSelect').val(MAP_TILE_PROVIDERS[0])
+
 			// Setup double-click marker placement
 			map.on('dblclick', function(e) {
 				if (!marker)
@@ -325,11 +364,22 @@
 				if (devices && devices.length)
 					$('#set-location').removeAttr('disabled');
 			});
+			
+			function getMapSearchProvider() {
+				var k = $('#mapSearchProviderSelect').val() + 'Provider';
+				var f = [];
+				if (k in GeoSearch) {
+					return new GeoSearch[k]()
+				} else {
+					alert('Unknown search provider: ' + k)
+				}
+			}
 
 			function searchLocation() {
 				if (!$('#query').val())
 					return;
 				$('#search').attr('disabled', true);
+				var provider = getMapSearchProvider();
 				provider.search({query: $('#query').val()}).then(function(r) {
 					$('#search').removeAttr('disabled');
 					if (r.length) {
@@ -355,21 +405,25 @@
 			map.doubleClickZoom.disable();
 			
 			// Set the OSM basemap layer
-			var defaultProvider = function() {
-				L.tileLayer.provider('OpenStreetMap.Mapnik').addTo(map);
-			};
-			defaultProvider();
+			function updateMapTileProvider() {
+				setMapTileProvider($('#mapTileProviderSelect').val());
+			}
+			
+			function setMapTileProvider(name) {
+				if (map.hasLayer(activeTileLayer)) {
+					map.removeLayer(activeTileLayer)
+					activeTileLayer = null
+				}
+				activeTileLayer = L.tileLayer.provider(name)
+				map.addLayer(activeTileLayer);
+			}
 
 			// Provider toggle for OSM basemap layer (ie. due to rate limiting or IP block)
-			$('#mapProviderAlt').change(function() {
-				if (this.checked) {
-					L.tileLayer('https://tile.osm.ch/switzerland/{z}/{x}/{y}.png', {
-						attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-					}).addTo(map);
-				} else {
-                    defaultProvider();
-				}
+			$('#mapTileProviderSelect').change(function() {
+				updateMapTileProvider();
 			});
+			
+			updateMapTileProvider();
 			
 			// Initialise the map to the user's home country
 			fetch('/home_country').then(function(e) {
