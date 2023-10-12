@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using iFakeLocation.Services;
+using iFakeLocation.Services.Location;
+using iFakeLocation.Services.Mount;
 using iMobileDevice;
-using iMobileDevice.Afc;
 using iMobileDevice.iDevice;
 using iMobileDevice.Lockdown;
-using iMobileDevice.MobileImageMounter;
 using iMobileDevice.Plist;
 using iMobileDevice.PropertyListService;
-using iMobileDevice.Service;
 
 namespace iFakeLocation {
     class DeviceInformation {
@@ -66,6 +62,10 @@ namespace iFakeLocation {
             {"iPhone14,4", "iPhone 13 Mini"},
             {"iPhone14,5", "iPhone 13"},
             {"iPhone14,6", "iPhone SE 3rd Gen"},
+            {"iPhone14,7", "iPhone 14"},
+            {"iPhone14,8", "iPhone 14 Plus"},
+            {"iPhone15,2", "iPhone 14 Pro"},
+            {"iPhone15,3", "iPhone 14 Pro Max"},
 
             {"iPod1,1", "1st Gen iPod"},
             {"iPod2,1", "2nd Gen iPod"},
@@ -150,22 +150,30 @@ namespace iFakeLocation {
             {"iPad13,10", "iPad Pro 12.9 inch 5th Gen"},
             {"iPad13,11", "iPad Pro 12.9 inch 5th Gen"},
             {"iPad13,16", "iPad Air 5th Gen (WiFi)"},
-            {"iPad13,17", "iPad Air 5th Gen (WiFi+Cellular)"}
+            {"iPad13,17", "iPad Air 5th Gen (WiFi+Cellular)"},
+            {"iPad13,18", "iPad 10th Gen"},
+            {"iPad13,19", "iPad 10th Gen"},
+            {"iPad14,3", "iPad Pro 11 inch 4th Gen"},
+            {"iPad14,4", "iPad Pro 11 inch 4th Gen"},
+            {"iPad14,5", "iPad Pro 12.9 inch 6th Gen"},
+            {"iPad14,6", "iPad Pro 12.9 inch 6th Gen"}
         };
 
         public string Name { get; }
         public string UDID { get; }
+        public bool IsNetwork { get; }
         public Dictionary<string, object> Properties { get; private set; }
 
-        private DeviceInformation(string name, string udid) {
+        private DeviceInformation(string name, string udid, bool isNetwork) {
             Name = name;
             UDID = udid;
+            IsNetwork = isNetwork;
             Properties = new Dictionary<string, object>();
         }
 
         private void ReadProperties(PlistHandle node) {
             Properties =
-                PlistReader.ReadPlistDictFromNode(node, new[] {"ProductType", "ProductVersion", "HostAttached"});
+                PlistHelper.ReadPlistDictFromNode(node);
         }
 
         public override string ToString() {
@@ -181,23 +189,8 @@ namespace iFakeLocation {
             if (Properties.ContainsKey("ProductVersion"))
                 sb.Append("; iOS ").Append(Properties["ProductVersion"]);
 
-            sb.Append(')');
+            sb.Append(") [").Append(IsNetwork ? "Wi-Fi" : "USB").Append(']');
             return sb.ToString();
-        }
-
-        private enum DiskImageUploadMode {
-            AFC,
-            UploadImage
-        }
-
-        private static readonly MobileImageMounterUploadCallBack MounterUploadCallback = MounterReadCallback;
-
-        private static int MounterReadCallback(IntPtr buffer, uint size, IntPtr userData) {
-            var imageStream = (FileStream) GCHandle.FromIntPtr(userData).Target;
-            var buf = new byte[size];
-            var rl = imageStream.Read(buf, 0, buf.Length);
-            Marshal.Copy(buf, 0, buffer, buf.Length);
-            return rl;
         }
 
         public enum DeveloperModeToggleState {
@@ -222,7 +215,7 @@ namespace iFakeLocation {
 
             try {
                 // Get device handle
-                if (idevice.idevice_new(out deviceHandle, UDID) != iDeviceError.Success)
+                if (idevice.idevice_new_with_options(out deviceHandle, UDID, (int) (IsNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux)) != iDeviceError.Success)
                     throw new Exception("Unable to open device, is it connected?");
 
                 // Get lockdownd handle
@@ -273,7 +266,7 @@ namespace iFakeLocation {
 
             try {
                 // Get device handle
-                if (idevice.idevice_new(out deviceHandle, UDID) != iDeviceError.Success)
+                if (idevice.idevice_new_with_options(out deviceHandle, UDID, (int) (IsNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux)) != iDeviceError.Success)
                     throw new Exception("Unable to open device, is it connected?");
 
                 // Get lockdownd handle
@@ -315,7 +308,7 @@ namespace iFakeLocation {
                     throw new Exception("Failed to retrieve response after attempting to enable developer mode toggle.");
                 }
 
-                var dict = PlistReader.ReadPlistDictFromNode(plistHandle);
+                var dict = PlistHelper.ReadPlistDictFromNode(plistHandle);
                 if (dict.ContainsKey("Error")) {
                     throw new Exception("Failed to enable the developer mode toggle: " + dict["Error"]);
                 } else if (dict.ContainsKey("success")) {
@@ -345,342 +338,110 @@ namespace iFakeLocation {
             }
         }
 
-        public void EnableDeveloperMode(string deviceImagePath, string deviceImageSignaturePath) {
-            if (!File.Exists(deviceImagePath) || !File.Exists(deviceImageSignaturePath))
-                throw new FileNotFoundException("The specified device image files do not exist.");
-
-            iDeviceHandle deviceHandle = null;
-            LockdownClientHandle lockdownHandle = null;
-            LockdownServiceDescriptorHandle serviceDescriptor = null;
-            MobileImageMounterClientHandle mounterHandle = null;
-            AfcClientHandle afcHandle = null;
-            PlistHandle plistHandle = null;
-            FileStream imageStream = null;
-
-            // Use upload image for iOS 7 and above, otherwise use AFC
-            DiskImageUploadMode mode = int.Parse(((string) Properties["ProductVersion"]).Split('.')[0]) >= 7
-                ? DiskImageUploadMode.UploadImage
-                : DiskImageUploadMode.AFC;
-
-            var idevice = LibiMobileDevice.Instance.iDevice;
-            var lockdown = LibiMobileDevice.Instance.Lockdown;
-            var mounter = LibiMobileDevice.Instance.MobileImageMounter;
-            var afc = LibiMobileDevice.Instance.Afc;
-
-            try {
-                // Get device handle
-                if (idevice.idevice_new(out deviceHandle, UDID) != iDeviceError.Success)
-                    throw new Exception("Unable to open device, is it connected?");
-
-                // Get lockdownd handle
-                if (lockdown.lockdownd_client_new_with_handshake(deviceHandle, out lockdownHandle, "iFakeLocation") !=
-                    LockdownError.Success)
-                    throw new Exception("Unable to connect to lockdownd.");
-
-                // Start image mounter service
-                if (lockdown.lockdownd_start_service(lockdownHandle, "com.apple.mobile.mobile_image_mounter",
-                        out serviceDescriptor) != LockdownError.Success)
-                    throw new Exception("Unable to start the mobile image mounter service.");
-
-                // Create mounter instance
-                if (mounter.mobile_image_mounter_new(deviceHandle, serviceDescriptor, out mounterHandle) !=
-                    MobileImageMounterError.Success)
-                    throw new Exception("Unable to create mobile image mounter instance.");
-
-                // Close service descriptor
-                serviceDescriptor.Close();
-                serviceDescriptor = null;
-
-                // Start the AFC service
-                if (mode == DiskImageUploadMode.AFC) {
-                    if (lockdown.lockdownd_start_service(lockdownHandle, "com.apple.afc", out serviceDescriptor) !=
-                        LockdownError.Success)
-                        throw new Exception("Unable to start AFC service.");
-
-                    if (afc.afc_client_new(deviceHandle, serviceDescriptor, out afcHandle) != AfcError.Success)
-                        throw new Exception("Unable to connect to AFC service.");
-
-                    serviceDescriptor.Close();
-                    serviceDescriptor = null;
-                }
-
-                // Close lockdown handle
-                lockdownHandle.Close();
-                lockdownHandle = null;
-
-                // Check if the developer image has already been mounted
-                const string imageType = "Developer";
-                if (mounter.mobile_image_mounter_lookup_image(mounterHandle, imageType, out plistHandle) ==
-                    MobileImageMounterError.Success) {
-                    var results =
-                        PlistReader.ReadPlistDictFromNode(plistHandle, new[] {"ImagePresent", "ImageSignature"});
-
-                    // Some iOS use ImagePresent to verify presence, while others use ImageSignature instead
-                    // Ensure to check the content of the ImageSignature value as iOS 14 returns a value even
-                    // if it is empty.
-                    if ((results.ContainsKey("ImagePresent") &&
-                         results["ImagePresent"] is bool &&
-                         (bool) results["ImagePresent"]) ||
-                        (results.ContainsKey("ImageSignature") &&
-                         results["ImageSignature"] is string &&
-                         ((string)results["ImageSignature"]).IndexOf("<data>", StringComparison.InvariantCulture) >= 0))
-                        return;
-                }
-
-                plistHandle.Close();
-                plistHandle = null;
-
-                // Configure paths for upload
-                const string PkgPath = "PublicStaging";
-                const string PathPrefix = "/private/var/mobile/Media";
-
-                var targetName = PkgPath + "/staging.dimage";
-                var mountName = PathPrefix + "/" + targetName;
-
-                imageStream = new FileStream(deviceImagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var sig = File.ReadAllBytes(deviceImageSignaturePath);
-
-                switch (mode) {
-                    case DiskImageUploadMode.UploadImage:
-                        // Create stream for device image and wrap as a pointer for callback
-                        var handle = GCHandle.Alloc(imageStream);
-                        // Upload the image and then free unmanaged wrapper
-                        mounter.mobile_image_mounter_upload_image(mounterHandle, imageType, (uint) imageStream.Length,
-                            sig, (ushort) sig.Length, MounterUploadCallback, GCHandle.ToIntPtr(handle));
-                        handle.Free();
-                        break;
-                    case DiskImageUploadMode.AFC:
-                        // Create directory for package
-                        ReadOnlyCollection<string> strs;
-                        if (afc.afc_get_file_info(afcHandle, PkgPath, out strs) != AfcError.Success ||
-                            afc.afc_make_directory(afcHandle, PkgPath) != AfcError.Success)
-                            throw new Exception("Unable to create directory '" + PkgPath + "' on the device.");
-
-                        // Create the target file
-                        ulong af = 0;
-                        if (afc.afc_file_open(afcHandle, targetName, AfcFileMode.FopenWronly, ref af) !=
-                            AfcError.Success)
-                            throw new Exception("Unable to create file '" + targetName + "'.");
-
-                        // Read the file in chunks and write via AFC
-                        uint amount = 0;
-                        byte[] buf = new byte[8192];
-                        do {
-                            amount = (uint) imageStream.Read(buf, 0, buf.Length);
-                            if (amount > 0) {
-                                uint written = 0, total = 0;
-                                while (total < amount) {
-                                    // Write and ensure that it succeeded
-                                    if (afc.afc_file_write(afcHandle, af, buf, amount, ref written) !=
-                                        AfcError.Success) {
-                                        afc.afc_file_close(afcHandle, af);
-                                        throw new Exception("An AFC write error occurred.");
-                                    }
-
-                                    total += written;
-                                }
-
-                                if (total != amount) {
-                                    afc.afc_file_close(afcHandle, af);
-                                    throw new Exception("The developer image was not written completely.");
-                                }
-                            }
-                        } while (amount > 0);
-
-                        afc.afc_file_close(afcHandle, af);
-                        break;
-                }
-
-                // Mount the image
-                if (mounter.mobile_image_mounter_mount_image(mounterHandle, mountName, sig, (ushort) sig.Length,
-                        imageType, out plistHandle) != MobileImageMounterError.Success)
-                    throw new Exception("Unable to mount developer image.");
-
-                // Parse the plist result
-                var result = PlistReader.ReadPlistDictFromNode(plistHandle);
-                if (!result.ContainsKey("Status") ||
-                    result["Status"] as string != "Complete")
-                    throw new Exception("Mount failed with status: " +
-                                        (result.ContainsKey("Status") ? result["Status"] : "N/A") + " and error: " +
-                                        (result.ContainsKey("Error") ? result["Error"] : "N/A"));
+        public void EnableDeveloperMode(string[] fileNames) {
+            // Use personalized image mounter for iOS 17 and above, otherwise use the standard mobile image mounter
+            if (int.Parse(((string)Properties["ProductVersion"]).Split('.')[0]) >= 17) {
+                new PersonalizedImageMounter(this).EnableDeveloperMode(fileNames);
             }
-            finally {
-                if (imageStream != null)
-                    imageStream.Close();
-
-                if (plistHandle != null)
-                    plistHandle.Close();
-
-                if (afcHandle != null)
-                    afcHandle.Close();
-
-                if (mounterHandle != null)
-                    mounterHandle.Close();
-
-                if (serviceDescriptor != null)
-                    serviceDescriptor.Close();
-
-                if (lockdownHandle != null)
-                    lockdownHandle.Close();
-
-                if (deviceHandle != null)
-                    deviceHandle.Close();
+            else {
+                new DeveloperDiskImageMounter(this).EnableDeveloperMode(fileNames);
             }
-        }
-
-        private static byte[] ToBytesBE(int i) {
-            var b = BitConverter.GetBytes((uint) i);
-            if (BitConverter.IsLittleEndian) Array.Reverse(b);
-            return b;
-        }
-
-        public void SetLocation(PointLatLng target) {
-            SetLocation(this, target);
         }
 
         public void StopLocation() {
-            SetLocation(this, null);
+            SetLocation(null);
         }
 
-        private static void SetLocation(DeviceInformation deviceInfo, PointLatLng? target) {
-            iDeviceHandle deviceHandle = null;
-            LockdownClientHandle lockdownHandle = null;
-            LockdownServiceDescriptorHandle simulateDescriptor = null;
-            ServiceClientHandle serviceClientHandle = null;
+        public void SetLocation(PointLatLng? target) {
+            // Use DVT for iOS 17 and above, otherwise use the standard DT service
+            if (int.Parse(((string)Properties["ProductVersion"]).Split('.')[0]) >= 17) {
+                throw new NotImplementedException("Setting location is currently not supported for iOS 17 or newer.");
+            }
+            else {
+                new DtSimulateLocation(this).SetLocation(target);
+            }
+        }
 
+        public static List<DeviceInformation> GetDevices(bool includeNetwork = true) {
             var idevice = LibiMobileDevice.Instance.iDevice;
             var lockdown = LibiMobileDevice.Instance.Lockdown;
-            var service = LibiMobileDevice.Instance.Service;
+            var plist = LibiMobileDevice.Instance.Plist;
+            
+            var devices = new List<DeviceInformation>();
 
+            // Obtain list of pointers to iDeviceInfo structures
+            IntPtr devListPtr = IntPtr.Zero;
+            int count = 0;
             try {
-                // Get device handle
-                var err = idevice.idevice_new(out deviceHandle, deviceInfo.UDID);
-                if (err != iDeviceError.Success)
-                    throw new Exception("Unable to connect to the device. Make sure it is connected.");
+                if (idevice.idevice_get_device_list_extended(ref devListPtr, ref count) != iDeviceError.Success)
+                    return null;
 
-                // Obtain a lockdown client handle
-                if (lockdown.lockdownd_client_new_with_handshake(deviceHandle, out lockdownHandle, "iFakeLocation") !=
-                    LockdownError.Success)
-                    throw new Exception("Unable to connect to lockdownd.");
+                iDeviceHandle deviceHandle = null;
+                LockdownClientHandle lockdownHandle = null;
+                PlistHandle plistHandle = null;
 
-                // Start the simulatelocation service
-                if (lockdown.lockdownd_start_service(lockdownHandle, "com.apple.dt.simulatelocation",
-                        out simulateDescriptor) != LockdownError.Success ||
-                    simulateDescriptor.IsInvalid)
-                    throw new Exception("Unable to start simulatelocation service.");
+                // Ensure the iDeviceInfo* is not-null
+                IntPtr devListCurPtr = devListPtr;
+                while (devListCurPtr != IntPtr.Zero && 
+                       Marshal.ReadIntPtr(devListCurPtr) != IntPtr.Zero) {
 
-                // Create new service client
-                if (service.service_client_new(deviceHandle, simulateDescriptor, out serviceClientHandle) !=
-                    ServiceError.Success)
-                    throw new Exception("Unable to create simulatelocation service client.");
+                    // Skip network devices if not enabled
+                    iDeviceInfo info = (iDeviceInfo) Marshal.PtrToStructure(Marshal.ReadIntPtr(devListCurPtr), typeof(iDeviceInfo));
+                    devListCurPtr = IntPtr.Add(devListCurPtr, IntPtr.Size);
 
-                if (!target.HasValue) {
-                    // Send stop
-                    var stopMessage = ToBytesBE(1); // 0x1 (32-bit big-endian uint)
-                    uint sent = 0;
-                    if (service.service_send(serviceClientHandle, stopMessage, (uint) stopMessage.Length, ref sent) !=
-                        ServiceError.Success)
-                        throw new Exception("Unable to send stop message to device.");
-                }
-                else {
-                    // Send start
-                    var startMessage = ToBytesBE(0); // 0x0 (32-bit big-endian uint)
-                    var lat = Encoding.ASCII.GetBytes(target.Value.Lat.ToString(CultureInfo.InvariantCulture));
-                    var lng = Encoding.ASCII.GetBytes(target.Value.Lng.ToString(CultureInfo.InvariantCulture));
-                    var latLen = ToBytesBE(lat.Length);
-                    var lngLen = ToBytesBE(lng.Length);
-                    uint sent = 0;
+                    bool isNetwork = info.conn_type == iDeviceConnectionType.Network;
+                    if (isNetwork && !includeNetwork)
+                        continue;
 
-                    if (service.service_send(serviceClientHandle, startMessage, (uint) startMessage.Length, ref sent) !=
-                        ServiceError.Success ||
-                        service.service_send(serviceClientHandle, latLen, (uint) latLen.Length, ref sent) !=
-                        ServiceError.Success ||
-                        service.service_send(serviceClientHandle, lat, (uint) lat.Length, ref sent) !=
-                        ServiceError.Success ||
-                        service.service_send(serviceClientHandle, lngLen, (uint) lngLen.Length, ref sent) !=
-                        ServiceError.Success ||
-                        service.service_send(serviceClientHandle, lng, (uint) lng.Length, ref sent) !=
-                        ServiceError.Success) {
-                        throw new Exception("Unable to send co-ordinates to device.");
+                    try {
+                        // Attempt to get device handle of each uuid
+                        var err = idevice.idevice_new_with_options(out deviceHandle, info.udidString,
+                            (int)(isNetwork ? iDeviceOptions.LookupNetwork : iDeviceOptions.LookupUsbmux));
+                        if (err != iDeviceError.Success)
+                            continue;
+
+                        // Obtain a lockdown client handle
+                        if (lockdown.lockdownd_client_new_with_handshake(deviceHandle, out lockdownHandle,
+                                "iFakeLocation") !=
+                            LockdownError.Success)
+                            continue;
+
+                        // Obtain the device name
+                        string name;
+                        DeviceInformation device;
+                        if (lockdown.lockdownd_get_device_name(lockdownHandle, out name) != LockdownError.Success)
+                            continue;
+
+                        device = new DeviceInformation(name, info.udidString, isNetwork);
+
+                        // Get device details
+                        if (lockdown.lockdownd_get_value(lockdownHandle, null, null, out plistHandle) !=
+                            LockdownError.Success ||
+                            plist.plist_get_node_type(plistHandle) != PlistType.Dict)
+                            continue;
+
+                        device.ReadProperties(plistHandle);
+
+                        // Ensure device is attached
+                        if (!device.Properties.ContainsKey("HostAttached") || (bool)device.Properties["HostAttached"])
+                            devices.Add(device);
+                    }
+                    finally {
+                        // Cleanup
+                        if (plistHandle != null)
+                            plistHandle.Close();
+                        if (lockdownHandle != null)
+                            lockdownHandle.Close();
+                        if (deviceHandle != null)
+                            deviceHandle.Close();
                     }
                 }
             }
             finally {
-                // Cleanup
-                if (serviceClientHandle != null)
-                    serviceClientHandle.Close();
-
-                if (simulateDescriptor != null)
-                    simulateDescriptor.Close();
-
-                if (lockdownHandle != null)
-                    lockdownHandle.Close();
-
-                if (deviceHandle != null)
-                    deviceHandle.Close();
+                if (devListPtr != IntPtr.Zero)
+                    idevice.idevice_device_list_extended_free(devListPtr);
             }
-        }
 
-        public static List<DeviceInformation> GetDevices() {
-            var idevice = LibiMobileDevice.Instance.iDevice;
-            var lockdown = LibiMobileDevice.Instance.Lockdown;
-            var plist = LibiMobileDevice.Instance.Plist;
-
-            // Retrieve list of unique device identifiers
-            ReadOnlyCollection<string> uddids;
-            int count = 0;
-            var ret = idevice.idevice_get_device_list(out uddids, ref count);
-            if (ret != iDeviceError.Success)
-                return null;
-
-            iDeviceHandle deviceHandle = null;
-            LockdownClientHandle lockdownHandle = null;
-            PlistHandle plistHandle = null;
-
-            var devices = new List<DeviceInformation>();
-            foreach (var udid in uddids.Distinct()) {
-                try {
-                    // Attempt to get device handle of each uuid
-                    var err = idevice.idevice_new(out deviceHandle, udid);
-                    if (err != iDeviceError.Success)
-                        continue;
-
-                    // Obtain a lockdown client handle
-                    if (lockdown.lockdownd_client_new_with_handshake(deviceHandle, out lockdownHandle,
-                            "iFakeLocation") !=
-                        LockdownError.Success)
-                        continue;
-
-                    // Obtain the device name
-                    string name;
-                    DeviceInformation device;
-                    if (lockdown.lockdownd_get_device_name(lockdownHandle, out name) != LockdownError.Success)
-                        continue;
-
-                    device = new DeviceInformation(name, udid);
-
-                    // Get device details
-                    if (lockdown.lockdownd_get_value(lockdownHandle, null, null, out plistHandle) !=
-                        LockdownError.Success ||
-                        plist.plist_get_node_type(plistHandle) != PlistType.Dict)
-                        continue;
-
-                    device.ReadProperties(plistHandle);
-
-                    // Ensure device is attached
-                    if (!device.Properties.ContainsKey("HostAttached") || (bool) device.Properties["HostAttached"])
-                        devices.Add(device);
-                }
-                finally {
-                    // Cleanup
-                    if (plistHandle != null)
-                        plistHandle.Close();
-                    if (lockdownHandle != null)
-                        lockdownHandle.Close();
-                    if (deviceHandle != null)
-                        deviceHandle.Close();
-                }
-            }
 
             return devices;
         }
