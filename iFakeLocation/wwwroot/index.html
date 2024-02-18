@@ -1,18 +1,18 @@
 <!doctype html>
-<html>
+<html lang="en">
 	<head>
 		<title>iFakeLocation</title>
-		<script src="babel.polyfill.min.js"></script>
-		<script src="fetch.min.js"></script>
-		<script src="jquery-3.3.1.min.js"></script>
-		<script src="popper.min.js"></script>
-		<script src="bootstrap.min.js"></script>
-		<script src="leaflet.js"></script>
-		<script src="leaflet-providers.min.js"></script>
-		<script src="leaflet-geosearch.min.js"></script>
-		<link rel="stylesheet" href="bootstrap.min.css">
-		<link rel="stylesheet" href="leaflet.css">
-		<link rel="stylesheet" href="leaflet-geosearch.css">
+		<script src="js/babel.polyfill.min.js"></script>
+		<script src="js/fetch.min.js"></script>
+		<script src="js/jquery-3.3.1.min.js"></script>
+		<script src="js/popper.min.js"></script>
+		<script src="js/bootstrap.min.js"></script>
+		<script src="js/leaflet.js"></script>
+		<script src="js/leaflet-providers.min.js"></script>
+		<script src="js/leaflet-geosearch.min.js"></script>
+		<link rel="stylesheet" href="css/bootstrap.min.css">
+		<link rel="stylesheet" href="css/leaflet.css">
+		<link rel="stylesheet" href="css/leaflet-geosearch.css">
 	</head>
 	<body>
 		<div class="p-3 px-md-4 mb-3 bg-white border-bottom box-shadow">
@@ -42,12 +42,14 @@
 			
 			<p><small>Click and drag to move the map. Use the mouse wheel or +/- buttons to zoom. Double-click anywhere (or drag the existing marker) to manually select a location.</small></p>
 			
-			<p><div class="form-check">
-				<input class="form-check-input" type="checkbox" value="" id="mapProviderAlt">
-				<label class="form-check-label" for="flexCheckDefault">
-					Use alternative map tile server
-				</label>
-			</div></p>
+			<p>
+				<div class="form-check">
+					<input class="form-check-input" type="checkbox" value="" id="mapProviderAlt">
+					<label class="form-check-label" for="mapProviderAlt">
+						Use alternative map tile server
+					</label>
+				</div>
+			</p>
 			
 			<form id="locationSearch">
 				<div class="mb-3">
@@ -57,6 +59,7 @@
 						</div>
 						<div class="col">
 							<input type="text" class="form-control" id="query">
+							<p id="details"></p>
 						</div>
 						<div class="col-md-auto">
 							<button type="button" class="btn btn-primary pl-4 pr-4" id="search">Search</button>
@@ -125,12 +128,6 @@
 			</div>
 		</div>
 		<script>
-			// Set progress on progress modal
-			function setDownloadProgress(fileName, progress) {
-				$('#downloadModal').find('p').text('Downloading: ' + fileName + ' (' + progress.toFixed(2) + '%)');
-				$('#downloadModal').find('.progress-bar').attr('aria-valuenow', progress).width(Math.round(progress, 2) + '%');
-			}
-		
 			// Display specified message as modal
 			function showMessageModal(message) {
 				$('#messageModal').find('p').text(message);
@@ -182,30 +179,7 @@
 					}
 				});
 			});
-			
-			// Update current download progress
-			function getDownloadProgress(version, callback) {
-				fetch('/get_progress', {
-					method: 'POST',
-					body: version
-				}).then(function(e) {
-					return e.json()
-				}).then(function(r) {
-					if (r.error) {
-						$('#downloadModal').modal('hide');
-						showMessageModal(r.error);
-					} else if (r.done) {
-						$('#downloadModal').modal('hide');
-						callback();
-					} else {
-						setDownloadProgress(r.filename, r.progress);
-						setTimeout(function() {
-							getDownloadProgress(version, callback);
-						}, 250);
-					}
-				});
-			}
-			
+
 			// Sets the selected marker positon
 			var lt = null;
 			function setLocation(dev, callback) {
@@ -268,39 +242,14 @@
 					}
 				});
 			}
-			
+
 			function locationPerform(b, locationMethod) {
-				var dev = devices[$('#device')[0].selectedIndex];
-				fetch('/has_dependencies', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({udid: dev.udid})
-				}).then(function(e) {
-					return e.json()
-				}).then(function(r) {
-					if (r.error) {
-						b.removeAttr('disabled');
-						showMessageModal(r.error);
-					} else if (r.result) {
-						locationMethod(dev, function() {
-							b.removeAttr('disabled');
-						});
-					} else {
-						getDownloadProgress(r.version, function() { 
-							locationMethod(dev, function() {
-								b.removeAttr('disabled');
-							});
-						});
-						$('#downloadModal').modal({
-							backdrop: 'static',
-							keyboard: false
-						});
-					}
+				const dev = devices[$('#device')[0].selectedIndex];
+				locationMethod(dev, function() {
+					b.removeAttr('disabled');
 				});
 			}
-			
+
 			// Handle location set-location
 			$('#set-location').click(function() {
 				locationPerform($(this).attr('disabled', true), setLocation);
