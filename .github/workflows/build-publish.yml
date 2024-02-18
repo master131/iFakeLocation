@@ -1,0 +1,33 @@
+name: Build and Publish
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        runtime: [linux-x64, linux-arm, win-x64, osx-x64, osx-arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build and Publish
+        run: |
+          dotnet publish -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishReadyToRun=true -o ./publish/${{ matrix.runtime }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.runtime }}
+          path: |
+            **/publish/${{ matrix.runtime }}/*

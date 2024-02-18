@@ -1,3 +1,6 @@
 .vs/
+.idea/
+.vscode/
 iFakeLocation/bin/
 iFakeLocation/obj/
+publish/
